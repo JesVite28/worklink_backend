@@ -1,0 +1,31 @@
+<?php
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | Cross-Origin Resource Sharing (CORS) Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Here you may configure your settings for cross-origin resource sharing
+    | or "CORS". This determines which cross-origin operations may be
+    | executed in web browsers. You are free to adjust these settings as
+    | needed for your application. See https://laravel.com/docs/cors
+    |
+    */
+
+    'paths' => ['api/*', 'login', 'refresh', 'logout', 'me'],
+
+    'allowed_methods' => ['*'],
+
+    'allowed_origins' => ['*'],
+
+    'allowed_origins_patterns' => [],
+
+    'allowed_headers' => ['*'],
+
+    'exposed_headers' => [],
+
+    'max_age' => 0,
+
+    'supports_credentials' => false,
+];
