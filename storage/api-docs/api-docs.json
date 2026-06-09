@@ -331,6 +331,555 @@
                 }
             }
         },
+        "/api/availabilities": {
+            "get": {
+                "tags": [
+                    "Availabilities"
+                ],
+                "summary": "Obtener lista de disponibilidades",
+                "description": "Retorna una lista de todos los rangos de disponibilidad con su perfil de freelancer",
+                "operationId": "4923e93a277dce22f278bf32384aeb30",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Availabilities"
+                ],
+                "summary": "Crear un nuevo rango de disponibilidad",
+                "description": "Crea un registro de disponibilidad en la base de datos",
+                "operationId": "11897ab453d7a16dd9dafdc9f98dcd91",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "freelancer_id",
+                                    "start_date",
+                                    "end_date"
+                                ],
+                                "properties": {
+                                    "freelancer_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-06-15"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-06-30"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "available",
+                                            "busy",
+                                            "vacation"
+                                        ],
+                                        "example": "available"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Disponibilidad creada exitosamente"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/availabilities/{id}": {
+            "get": {
+                "tags": [
+                    "Availabilities"
+                ],
+                "summary": "Obtener una disponibilidad específica",
+                "description": "Retorna los detalles de un registro específico de disponibilidad buscado por su ID",
+                "operationId": "ef8584656f36621e848ea69225254810",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de la disponibilidad",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "404": {
+                        "description": "Disponibilidad no encontrada"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Availabilities"
+                ],
+                "summary": "Actualizar una disponibilidad horaria",
+                "description": "Actualiza las fechas o el estado de una disponibilidad existente",
+                "operationId": "e63fbe38f9f205a4eee29f1b77c6434e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de la disponibilidad a actualizar",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-06-15"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-07-10"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "available",
+                                            "busy",
+                                            "vacation"
+                                        ],
+                                        "example": "busy"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Disponibilidad actualizada correctamente"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Availabilities"
+                ],
+                "summary": "Eliminar una disponibilidad horaria",
+                "description": "Aplica un Soft Delete al registro de disponibilidad especificado",
+                "operationId": "a5df618e03fd593a7088a5d8453cf30d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de la disponibilidad a eliminar",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Disponibilidad eliminada"
+                    },
+                    "404": {
+                        "description": "Disponibilidad no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/briefcases": {
+            "get": {
+                "tags": [
+                    "Briefcases"
+                ],
+                "summary": "Obtener lista de portafolios",
+                "description": "Retorna una lista de todos los proyectos de portafolio con su perfil de freelancer",
+                "operationId": "b56d76c2c0a99799ae7b7903e3191739",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Briefcases"
+                ],
+                "summary": "Crear un nuevo proyecto en el portafolio",
+                "description": "Crea un registro de portafolio en la base de datos",
+                "operationId": "7c6440bcd5d79c895f552392af0c75e9",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "freelancer_id",
+                                    "title"
+                                ],
+                                "properties": {
+                                    "freelancer_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "example": "E-commerce en Laravel"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Desarrollo completo de una tienda online..."
+                                    },
+                                    "url_image": {
+                                        "type": "string",
+                                        "example": "https://misitio.com/imagen.jpg"
+                                    },
+                                    "url_proyecto": {
+                                        "type": "string",
+                                        "example": "https://github.com/usuario/repo"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Proyecto creado exitosamente"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/briefcases/{id}": {
+            "get": {
+                "tags": [
+                    "Briefcases"
+                ],
+                "summary": "Obtener un proyecto específico",
+                "description": "Retorna los detalles de un proyecto de portafolio buscado por su ID",
+                "operationId": "886ac191c884a617565f8e8d36bf2f22",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del proyecto",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "404": {
+                        "description": "Proyecto no encontrado"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Briefcases"
+                ],
+                "summary": "Actualizar un proyecto del portafolio",
+                "description": "Actualiza la información de un proyecto existente",
+                "operationId": "6ba200931f2fb95bb3355345af0ba4f8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del proyecto a actualizar",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "E-commerce en Laravel (Actualizado)"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Nueva descripción del proyecto..."
+                                    },
+                                    "url_image": {
+                                        "type": "string",
+                                        "example": "https://misitio.com/nueva_imagen.jpg"
+                                    },
+                                    "url_proyecto": {
+                                        "type": "string",
+                                        "example": "https://github.com/usuario/repo_actualizado"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Proyecto actualizado correctamente"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Briefcases"
+                ],
+                "summary": "Eliminar un proyecto del portafolio",
+                "description": "Aplica un Soft Delete al proyecto especificado",
+                "operationId": "0110e6846287d25b2623e86d2024e9aa",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del proyecto a eliminar",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Proyecto eliminado"
+                    },
+                    "404": {
+                        "description": "Proyecto no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/profiles": {
+            "get": {
+                "tags": [
+                    "Freelancer Profiles"
+                ],
+                "summary": "Obtener lista de perfiles",
+                "description": "Retorna una lista de todos los perfiles de freelancers con su información de usuario",
+                "operationId": "429bf3dc98ba4b1168e478ee005a93a6",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Freelancer Profiles"
+                ],
+                "summary": "Crear un nuevo perfil de freelancer",
+                "description": "Crea un registro de perfil vinculado a un usuario existente",
+                "operationId": "ae8a1898321720b8fa83cd5d35a36e6e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "user_id"
+                                ],
+                                "properties": {
+                                    "user_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Desarrollador Full Stack con 5 años de experiencia..."
+                                    },
+                                    "specialty": {
+                                        "type": "string",
+                                        "example": "Desarrollo Web"
+                                    },
+                                    "hourly_rate": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 25.5
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "example": "Ciudad de México"
+                                    },
+                                    "available": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "average_rate": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 5
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Perfil creado exitosamente"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/profiles/{id}": {
+            "get": {
+                "tags": [
+                    "Freelancer Profiles"
+                ],
+                "summary": "Obtener el perfil completo de un freelancer",
+                "description": "Retorna los detalles del perfil, incluyendo sus servicios, portafolio y disponibilidad",
+                "operationId": "0c7703a85a8be4bcd8034d22349d6edb",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del perfil del freelancer",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "404": {
+                        "description": "Perfil no encontrado"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Freelancer Profiles"
+                ],
+                "summary": "Actualizar un perfil de freelancer",
+                "description": "Actualiza la información pública del perfil (tarifa, descripción, especialidad, etc.)",
+                "operationId": "dd8486e95df10b69cf02a3ca189df163",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del perfil a actualizar",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Descripción actualizada..."
+                                    },
+                                    "specialty": {
+                                        "type": "string",
+                                        "example": "Arquitecto de Software"
+                                    },
+                                    "hourly_rate": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 30
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "example": "Monterrey"
+                                    },
+                                    "available": {
+                                        "type": "boolean",
+                                        "example": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Perfil actualizado correctamente"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Freelancer Profiles"
+                ],
+                "summary": "Eliminar un perfil de freelancer",
+                "description": "Aplica un Soft Delete al perfil especificado",
+                "operationId": "1fd7c17f5ba1ada78a92f506b8a241e5",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del perfil a eliminar",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Perfil eliminado"
+                    },
+                    "404": {
+                        "description": "Perfil no encontrado"
+                    }
+                }
+            }
+        },
         "/api/roles": {
             "get": {
                 "tags": [
@@ -433,6 +982,206 @@
                         "bearerAuth": []
                     }
                 ]
+            }
+        },
+        "/api/services": {
+            "get": {
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Obtener lista de servicios",
+                "description": "Retorna una lista de todos los servicios activos con su perfil de freelancer",
+                "operationId": "4c175c5d6594b4a5112bbe15a46e2bb4",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Crear un nuevo servicio",
+                "description": "Crea un registro de servicio en la base de datos",
+                "operationId": "b05b71c30267faa468172458580fb6fc",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "freelancer_id",
+                                    "title",
+                                    "description",
+                                    "category"
+                                ],
+                                "properties": {
+                                    "freelancer_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Desarrollo Web en Laravel"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Creación de API RESTful..."
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 50
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "example": "Programación"
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "example": "Remoto"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Servicio creado exitosamente"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                }
+            }
+        },
+        "/api/services/{id}": {
+            "get": {
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Obtener un servicio específico",
+                "description": "Retorna los detalles de un solo servicio buscado por su ID",
+                "operationId": "42775b582b563bc36a9e06ae850100bf",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del servicio",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    },
+                    "404": {
+                        "description": "Servicio no encontrado"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Actualizar un servicio",
+                "description": "Actualiza la información de un servicio existente",
+                "operationId": "38f6a6cc2f5cd3dfdf39805e7fa21996",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del servicio a actualizar",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "description",
+                                    "category"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Desarrollo Web (Actualizado)"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Nueva descripción..."
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 60
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "example": "Programación"
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "example": "Remoto"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Servicio actualizado correctamente"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Eliminar un servicio",
+                "description": "Aplica un Soft Delete al servicio especificado",
+                "operationId": "c189d6ab2d037e8fb4228a535ae6a399",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del servicio a eliminar",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Servicio eliminado"
+                    },
+                    "404": {
+                        "description": "Servicio no encontrado"
+                    }
+                }
             }
         },
         "/api/users": {
@@ -624,6 +1373,22 @@
         {
             "name": "Roles",
             "description": "Gestión de roles"
+        },
+        {
+            "name": "Availabilities",
+            "description": "Endpoints para la gestión de la Disponibilidad Horaria de los Freelancers"
+        },
+        {
+            "name": "Briefcases",
+            "description": "Endpoints para la gestión del Portafolio (Briefcases) de los Freelancers"
+        },
+        {
+            "name": "Freelancer Profiles",
+            "description": "Endpoints para la gestión de los Perfiles de Freelancers"
+        },
+        {
+            "name": "Services",
+            "description": "Endpoints para la gestión de Servicios de los Freelancers"
         }
     ]
 }

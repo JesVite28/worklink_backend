@@ -5,6 +5,10 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ActivityLogController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\FreelancerProfileController;
+use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\BriefcaseController;
+use App\Http\Controllers\AvailabilityController;
 
 
 // Auth routes (sin protección)
@@ -46,5 +50,34 @@ Route::middleware('auth.api')->group(function () {
         Route::get('/users/{id}', [UserController::class, 'show']);
         Route::put('/users/{id}', [UserController::class, 'update']);
         Route::delete('/users/{id}', [UserController::class, 'destroy']);
-    });
+    }); 
 });
+ // Freelancer Profiles - Gestión de perfiles de freelancers
+        Route::get('/profiles', [FreelancerProfileController::class, 'index']);
+        Route::post('/profiles', [FreelancerProfileController::class, 'store']);
+        Route::get('/profiles/{id}', [FreelancerProfileController::class, 'show']);
+        Route::put('/profiles/{id}', [FreelancerProfileController::class, 'update']);
+        Route::delete('/profiles/{id}', [FreelancerProfileController::class, 'destroy']);
+
+    // Services - Gestión de servicios
+        Route::get('/services', [ServiceController::class, 'index']);
+        Route::post('/services', [ServiceController::class, 'store']);
+        Route::get('/services/{id}', [ServiceController::class, 'show']);
+        Route::put('/services/{id}', [ServiceController::class, 'update']);
+        Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
+
+    // Briefcases - Gestión de portafolios
+        Route::get('/briefcases', [BriefcaseController::class, 'index']);
+        Route::post('/briefcases', [BriefcaseController::class, 'store']);
+        Route::get('/briefcases/{id}', [BriefcaseController::class, 'show']);
+        Route::put('/briefcases/{id}', [BriefcaseController::class, 'update']);
+        Route::delete('/briefcases/{id}', [BriefcaseController::class, 'destroy']);
+
+
+    // Availabilities - Gestión de disponibilidades
+        Route::get('/availabilities', [AvailabilityController::class, 'index']);
+        Route::post('/availabilities', [AvailabilityController::class, 'store']);
+        Route::get('/availabilities/{id}', [AvailabilityController::class, 'show']);
+        Route::put('/availabilities/{id}', [AvailabilityController::class, 'update']);
+        Route::delete('/availabilities/{id}', [AvailabilityController::class, 'destroy']);
+
