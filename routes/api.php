@@ -9,7 +9,8 @@ use App\Http\Controllers\FreelancerProfileController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\BriefcaseController;
 use App\Http\Controllers\AvailabilityController;
-
+use App\Http\Controllers\ContractRequestController;
+use App\Http\Controllers\ContractController;
 
 // Auth routes (sin protección)
 Route::post('/login', [AuthController::class, 'login']);
@@ -81,3 +82,16 @@ Route::middleware('auth.api')->group(function () {
         Route::put('/availabilities/{id}', [AvailabilityController::class, 'update']);
         Route::delete('/availabilities/{id}', [AvailabilityController::class, 'destroy']);
 
+    // Contract Requests - Gestión de solicitudes de contratación
+        Route::get('/contract-requests', [ContractRequestController::class, 'index']);
+        Route::post('/contract-requests', [ContractRequestController::class, 'store']);
+        Route::get('/contract-requests/{id}', [ContractRequestController::class, 'show']);
+        Route::put('/contract-requests/{id}', [ContractRequestController::class, 'update']);
+        Route::delete('/contract-requests/{id}', [ContractRequestController::class, 'destroy']);
+
+    // Contracts - Gestión de contratos formalizados
+        Route::get('/contracts', [ContractController::class, 'index']);
+        Route::post('/contracts', [ContractController::class, 'store']);
+        Route::get('/contracts/{id}', [ContractController::class, 'show']);
+        Route::put('/contracts/{id}', [ContractController::class, 'update']);
+        Route::delete('/contracts/{id}', [ContractController::class, 'destroy']);

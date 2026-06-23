@@ -691,6 +691,338 @@
                 }
             }
         },
+        "/api/contracts": {
+            "get": {
+                "tags": [
+                    "Contracts"
+                ],
+                "summary": "Obtener lista de contratos",
+                "description": "Retorna una lista de todas las contrataciones con su solicitud origen",
+                "operationId": "1ab3a5b4a5e2aafb0f49ce993ee8a56a",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Contracts"
+                ],
+                "summary": "Crear un nuevo contrato",
+                "description": "Formaliza una solicitud de contratación en un contrato activo",
+                "operationId": "ec9937d8f85a0ef70236302888ea421e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "request_id",
+                                    "start_date",
+                                    "total_amount"
+                                ],
+                                "properties": {
+                                    "request_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-06-18"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-07-18"
+                                    },
+                                    "total_amount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 1200.5
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "in_process",
+                                            "completed",
+                                            "canceled"
+                                        ],
+                                        "example": "in_process"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Contrato creado exitosamente"
+                    }
+                }
+            }
+        },
+        "/api/contracts/{id}": {
+            "get": {
+                "tags": [
+                    "Contracts"
+                ],
+                "summary": "Obtener detalles de un contrato",
+                "operationId": "0551b349162da83031f7c5f1eac63c41",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Contracts"
+                ],
+                "summary": "Actualizar información o estado de un contrato",
+                "operationId": "97bc5c1f52562dcfdfb06d871def098e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "in_process",
+                                            "completed",
+                                            "canceled"
+                                        ]
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Contrato actualizado"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Contracts"
+                ],
+                "summary": "Eliminar un contrato (Soft Delete)",
+                "operationId": "ffec7d8c9c12722f9d5d32eb833deaed",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contrato eliminado"
+                    }
+                }
+            }
+        },
+        "/api/contract-requests": {
+            "get": {
+                "tags": [
+                    "Contract Requests"
+                ],
+                "summary": "Obtener lista de solicitudes",
+                "description": "Retorna todas las solicitudes con su cliente, freelancer y servicio relacionado",
+                "operationId": "a457ab707aea1c892a6cf5039ebbaea0",
+                "responses": {
+                    "200": {
+                        "description": "Operación exitosa"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Contract Requests"
+                ],
+                "summary": "Crear una solicitud",
+                "operationId": "9be9f92fd642ae1c7d5555d5bd055fdc",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "client_id",
+                                    "freelancer_id",
+                                    "service_id",
+                                    "description"
+                                ],
+                                "properties": {
+                                    "client_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "freelancer_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "service_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Detalles del proyecto..."
+                                    },
+                                    "budget": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 500
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "pending",
+                                            "accepted",
+                                            "rejected",
+                                            "canceled"
+                                        ],
+                                        "example": "pending"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Solicitud creada"
+                    }
+                }
+            }
+        },
+        "/api/contract-requests/{id}": {
+            "get": {
+                "tags": [
+                    "Contract Requests"
+                ],
+                "summary": "Obtener una solicitud específica",
+                "operationId": "46ada446af21cccbc8c3148f788da356",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Éxito"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Contract Requests"
+                ],
+                "summary": "Actualizar solicitud",
+                "operationId": "9f3f9d322e0d28f9f18e285ffa5f0eb0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "pending",
+                                            "accepted",
+                                            "rejected",
+                                            "canceled"
+                                        ]
+                                    },
+                                    "budget": {
+                                        "type": "number",
+                                        "format": "float"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Actualizado"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Contract Requests"
+                ],
+                "summary": "Eliminar solicitud",
+                "operationId": "257981914eba2fa14ce7157e17516ba9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Eliminado"
+                    }
+                }
+            }
+        },
         "/api/profiles": {
             "get": {
                 "tags": [
@@ -1381,6 +1713,14 @@
         {
             "name": "Briefcases",
             "description": "Endpoints para la gestión del Portafolio (Briefcases) de los Freelancers"
+        },
+        {
+            "name": "Contracts",
+            "description": "Endpoints para la gestión de Contrataciones formalizadas"
+        },
+        {
+            "name": "Contract Requests",
+            "description": "Endpoints para la gestión de solicitudes de contratación"
         },
         {
             "name": "Freelancer Profiles",
