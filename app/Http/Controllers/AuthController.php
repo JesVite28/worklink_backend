@@ -110,10 +110,10 @@ class AuthController extends Controller
                 'apellido' => $user->apellido,
                 'email' => $user->email,
                 'tipo_cuenta' => $user->tipo_cuenta,
-                'roles' => $user->roles->map(fn($role) => [
-                    'id' => $role->id,
-                    'nombre' => $role->nombre,
-                ])->toArray(),
+                'rol' => $user->roles->first() ? [
+                    'id' => $user->roles->first()->id,
+                    'nombre' => $user->roles->first()->nombre,
+                ] : null,
             ],
         ]);
     }
