@@ -17,6 +17,7 @@ class User extends Authenticatable implements JWTSubject
     protected $fillable = [
         'name',
         'last_name',
+        'maternal_last_name',
         'email',
         'password',
         'phone',
@@ -71,7 +72,7 @@ class User extends Authenticatable implements JWTSubject
 
     public function hasAllRoles(array $roles): bool
     {
-        return collect($roles)->every(fn ($role) => $this->hasRole($role));
+        return collect($roles)->every(fn($role) => $this->hasRole($role));
     }
 
     public function mainRole(): ?Role

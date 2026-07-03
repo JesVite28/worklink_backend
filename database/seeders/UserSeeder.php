@@ -18,6 +18,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Administrador',
                 'last_name' => 'Sistema',
+                'maternal_last_name' => null,
                 'email' => 'admin@worklink.com',
                 'password' => Hash::make('admin123'),
                 'phone' => '+1234567890',
@@ -29,7 +30,8 @@ class UserSeeder extends Seeder
         $this->createUserWithRole(
             [
                 'name' => 'Juan',
-                'last_name' => 'Cliente',
+                'last_name' => 'Pérez',
+                'maternal_last_name' => 'García',
                 'email' => 'cliente@worklink.com',
                 'password' => Hash::make('cliente123'),
                 'phone' => '+0987654321',
@@ -41,7 +43,8 @@ class UserSeeder extends Seeder
         $this->createUserWithRole(
             [
                 'name' => 'María',
-                'last_name' => 'Freelancer',
+                'last_name' => 'López',
+                'maternal_last_name' => 'Hernández',
                 'email' => 'freelancer@worklink.com',
                 'password' => Hash::make('freelancer123'),
                 'phone' => '+1122334455',
@@ -54,6 +57,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'TechCorp',
                 'last_name' => 'Solutions',
+                'maternal_last_name' => null,
                 'email' => 'empresa@worklink.com',
                 'password' => Hash::make('empresa123'),
                 'phone' => '+5556667777',

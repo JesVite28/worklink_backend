@@ -124,12 +124,13 @@ class AuthController extends Controller
      *             required={"name","last_name","email","password","password_confirmation","role"},
      *             @OA\Property(property="name", type="string", example="Adrian"),
      *             @OA\Property(property="last_name", type="string", example="Vite"),
+     *             @OA\Property(property="maternal_last_name", type="string", nullable=true, example="Espinosa"),
      *             @OA\Property(property="email", type="string", format="email", example="adrian@test.com"),
      *             @OA\Property(property="password", type="string", example="password123"),
      *             @OA\Property(property="password_confirmation", type="string", example="password123"),
      *             @OA\Property(property="role", type="string", enum={"cliente","freelancer","empresa"}, example="freelancer"),
-     *             @OA\Property(property="phone", type="string", example="7712233445"),
-     *             @OA\Property(property="profile_photo", type="string", example="https://example.com/photo.jpg")
+     *             @OA\Property(property="phone", type="string", nullable=true, example="7712233445"),
+     *             @OA\Property(property="profile_photo", type="string", nullable=true, example="https://example.com/photo.jpg")
      *         )
      *     ),
      *     @OA\Response(response=201, description="Usuario registrado exitosamente"),
@@ -143,6 +144,7 @@ class AuthController extends Controller
             $validated = $request->validate([
                 'name' => 'required|string|max:100',
                 'last_name' => 'required|string|max:100',
+                'maternal_last_name' => 'nullable|string|max:100',
                 'email' => 'required|email|max:150|unique:users,email',
                 'password' => 'required|string|min:8|confirmed',
                 'role' => 'required|string|in:cliente,freelancer,empresa',
@@ -160,6 +162,7 @@ class AuthController extends Controller
                 $user = User::create([
                     'name' => $validated['name'],
                     'last_name' => $validated['last_name'],
+                    'maternal_last_name' => $validated['maternal_last_name'] ?? null,
                     'email' => $validated['email'],
                     'password' => Hash::make($validated['password']),
                     'phone' => $validated['phone'] ?? null,
@@ -317,6 +320,7 @@ class AuthController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'last_name' => $user->last_name,
+            'maternal_last_name' => $user->maternal_last_name,
             'email' => $user->email,
             'phone' => $user->phone,
             'profile_photo' => $user->profile_photo,

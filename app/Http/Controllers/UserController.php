@@ -29,6 +29,7 @@ class UserController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'last_name' => $user->last_name,
+            'maternal_last_name' => $user->maternal_last_name,
             'email' => $user->email,
             'phone' => $user->phone,
             'profile_photo' => $user->profile_photo,
@@ -57,6 +58,7 @@ class UserController extends Controller
      *             required={"name","last_name","email","password","password_confirmation","role"},
      *             @OA\Property(property="name", type="string", example="Juan"),
      *             @OA\Property(property="last_name", type="string", example="Pérez"),
+     *             @OA\Property(property="maternal_last_name", type="string", nullable=true, example="López"),
      *             @OA\Property(property="email", type="string", format="email", example="juan@example.com"),
      *             @OA\Property(property="password", type="string", example="password123"),
      *             @OA\Property(property="password_confirmation", type="string", example="password123"),
@@ -77,6 +79,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
+            'maternal_last_name' => 'nullable|string|max:100',
             'email' => 'required|email|max:150|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
             'role' => 'required|string|in:cliente,freelancer,empresa',
@@ -91,6 +94,7 @@ class UserController extends Controller
             $user = User::create([
                 'name' => $validated['name'],
                 'last_name' => $validated['last_name'],
+                'maternal_last_name' => $validated['maternal_last_name'] ?? null,
                 'email' => $validated['email'],
                 'password' => Hash::make($validated['password']),
                 'phone' => $validated['phone'] ?? null,
@@ -224,6 +228,7 @@ class UserController extends Controller
      *         @OA\JsonContent(
      *             @OA\Property(property="name", type="string", example="Juan"),
      *             @OA\Property(property="last_name", type="string", example="Pérez"),
+     *             @OA\Property(property="maternal_last_name", type="string", nullable=true, example="López"),
      *             @OA\Property(property="email", type="string", format="email", example="juan@example.com"),
      *             @OA\Property(property="password", type="string", example="password123"),
      *             @OA\Property(property="password_confirmation", type="string", example="password123"),
@@ -253,6 +258,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:100',
             'last_name' => 'sometimes|required|string|max:100',
+            'maternal_last_name' => 'nullable|string|max:100',
             'email' => [
                 'sometimes',
                 'required',
@@ -270,7 +276,15 @@ class UserController extends Controller
         DB::transaction(function () use ($user, $validated) {
             $data = [];
 
-            foreach (['name', 'last_name', 'email', 'phone', 'profile_photo', 'is_active'] as $field) {
+            foreach ([
+                'name',
+                'last_name',
+                'maternal_last_name',
+                'email',
+                'phone',
+                'profile_photo',
+                'is_active',
+            ] as $field) {
                 if (array_key_exists($field, $validated)) {
                     $data[$field] = $validated[$field];
                 }

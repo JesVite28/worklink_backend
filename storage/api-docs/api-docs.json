@@ -292,6 +292,11 @@
                                         "type": "string",
                                         "example": "Vite"
                                     },
+                                    "maternal_last_name": {
+                                        "type": "string",
+                                        "example": "Espinosa",
+                                        "nullable": true
+                                    },
                                     "email": {
                                         "type": "string",
                                         "format": "email",
@@ -316,11 +321,13 @@
                                     },
                                     "phone": {
                                         "type": "string",
-                                        "example": "7712233445"
+                                        "example": "7712233445",
+                                        "nullable": true
                                     },
                                     "profile_photo": {
                                         "type": "string",
-                                        "example": "https://example.com/photo.jpg"
+                                        "example": "https://example.com/photo.jpg",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -2157,6 +2164,11 @@
                                         "type": "string",
                                         "example": "Pérez"
                                     },
+                                    "maternal_last_name": {
+                                        "type": "string",
+                                        "example": "López",
+                                        "nullable": true
+                                    },
                                     "email": {
                                         "type": "string",
                                         "format": "email",
@@ -2286,6 +2298,11 @@
                                     "last_name": {
                                         "type": "string",
                                         "example": "Pérez"
+                                    },
+                                    "maternal_last_name": {
+                                        "type": "string",
+                                        "example": "López",
+                                        "nullable": true
                                     },
                                     "email": {
                                         "type": "string",
