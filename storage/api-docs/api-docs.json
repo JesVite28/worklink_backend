@@ -181,9 +181,9 @@
                 "tags": [
                     "Chatbot IA"
                 ],
-                "summary": "Enviar mensaje al chatbot de WorkLink",
-                "description": "Permite enviar un mensaje al asistente inteligente de WorkLink para recibir asesoría sobre freelancers, empresas, servicios o solicitudes.",
-                "operationId": "91d30005c47186fd2b16070417bac21f",
+                "summary": "Enviar mensaje público al chatbot de WorkLink",
+                "description": "Permite enviar un mensaje al asistente inteligente de WorkLink sin iniciar sesión. Responde dudas generales sobre la plataforma.",
+                "operationId": "638221f9a90ffb0a016e3def3ed92e5a",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -195,7 +195,7 @@
                                 "properties": {
                                     "message": {
                                         "type": "string",
-                                        "example": "Necesito un freelancer que me haga una página web para mi restaurante"
+                                        "example": "¿Cómo funciona WorkLink?"
                                     }
                                 },
                                 "type": "object"
@@ -214,6 +214,54 @@
                         "description": "Error al conectar con el servicio de IA"
                     }
                 }
+            }
+        },
+        "/api/chatbot/auth-message": {
+            "post": {
+                "tags": [
+                    "Chatbot IA"
+                ],
+                "summary": "Enviar mensaje autenticado al chatbot de WorkLink",
+                "description": "Permite enviar un mensaje al asistente inteligente de WorkLink usando el contexto del usuario autenticado.",
+                "operationId": "a9d9d1f945205e0d751143ad904abd7e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "message"
+                                ],
+                                "properties": {
+                                    "message": {
+                                        "type": "string",
+                                        "example": "¿Qué puedo hacer con mi tipo de cuenta?"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Respuesta generada correctamente"
+                    },
+                    "401": {
+                        "description": "Usuario no autenticado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "500": {
+                        "description": "Error al conectar con el servicio de IA"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/login": {
@@ -268,12 +316,12 @@
                     "Auth"
                 ],
                 "summary": "Registrar usuario",
-                "description": "Registra un nuevo usuario y asigna un solo rol principal. El rol admin no puede registrarse desde este endpoint.",
+                "description": "Registra un nuevo usuario, asigna un solo rol principal y permite subir una foto de perfil opcional. El rol admin no puede registrarse desde este endpoint.",
                 "operationId": "register",
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "required": [
                                     "name",
@@ -286,28 +334,41 @@
                                 "properties": {
                                     "name": {
                                         "type": "string",
+                                        "maxLength": 100,
                                         "example": "Adrian"
                                     },
                                     "last_name": {
                                         "type": "string",
+                                        "maxLength": 100,
                                         "example": "Vite"
                                     },
                                     "maternal_last_name": {
                                         "type": "string",
+                                        "maxLength": 100,
                                         "example": "Espinosa",
                                         "nullable": true
                                     },
                                     "email": {
                                         "type": "string",
                                         "format": "email",
+                                        "maxLength": 150,
                                         "example": "adrian@test.com"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "maxLength": 20,
+                                        "example": "7712233445",
+                                        "nullable": true
                                     },
                                     "password": {
                                         "type": "string",
+                                        "format": "password",
+                                        "minLength": 8,
                                         "example": "password123"
                                     },
                                     "password_confirmation": {
                                         "type": "string",
+                                        "format": "password",
                                         "example": "password123"
                                     },
                                     "role": {
@@ -319,14 +380,10 @@
                                         ],
                                         "example": "freelancer"
                                     },
-                                    "phone": {
-                                        "type": "string",
-                                        "example": "7712233445",
-                                        "nullable": true
-                                    },
                                     "profile_photo": {
+                                        "description": "Foto de perfil opcional. Formatos permitidos: jpg, jpeg, png o webp. Tamaño máximo: 2MB.",
                                         "type": "string",
-                                        "example": "https://example.com/photo.jpg",
+                                        "format": "binary",
                                         "nullable": true
                                     }
                                 },

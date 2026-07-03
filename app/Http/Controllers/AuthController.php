@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Tymon\JWTAuth\Exceptions\JWTException;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @OA\Info(
@@ -117,20 +118,73 @@ class AuthController extends Controller
      *     operationId="register",
      *     tags={"Auth"},
      *     summary="Registrar usuario",
-     *     description="Registra un nuevo usuario y asigna un solo rol principal. El rol admin no puede registrarse desde este endpoint.",
+     *     description="Registra un nuevo usuario, asigna un solo rol principal y permite subir una foto de perfil opcional. El rol admin no puede registrarse desde este endpoint.",
      *     @OA\RequestBody(
      *         required=true,
-     *         @OA\JsonContent(
-     *             required={"name","last_name","email","password","password_confirmation","role"},
-     *             @OA\Property(property="name", type="string", example="Adrian"),
-     *             @OA\Property(property="last_name", type="string", example="Vite"),
-     *             @OA\Property(property="maternal_last_name", type="string", nullable=true, example="Espinosa"),
-     *             @OA\Property(property="email", type="string", format="email", example="adrian@test.com"),
-     *             @OA\Property(property="password", type="string", example="password123"),
-     *             @OA\Property(property="password_confirmation", type="string", example="password123"),
-     *             @OA\Property(property="role", type="string", enum={"cliente","freelancer","empresa"}, example="freelancer"),
-     *             @OA\Property(property="phone", type="string", nullable=true, example="7712233445"),
-     *             @OA\Property(property="profile_photo", type="string", nullable=true, example="https://example.com/photo.jpg")
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 required={"name","last_name","email","password","password_confirmation","role"},
+     *                 @OA\Property(
+     *                     property="name",
+     *                     type="string",
+     *                     maxLength=100,
+     *                     example="Adrian"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="last_name",
+     *                     type="string",
+     *                     maxLength=100,
+     *                     example="Vite"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="maternal_last_name",
+     *                     type="string",
+     *                     nullable=true,
+     *                     maxLength=100,
+     *                     example="Espinosa"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="email",
+     *                     type="string",
+     *                     format="email",
+     *                     maxLength=150,
+     *                     example="adrian@test.com"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="phone",
+     *                     type="string",
+     *                     nullable=true,
+     *                     maxLength=20,
+     *                     example="7712233445"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="password",
+     *                     type="string",
+     *                     format="password",
+     *                     minLength=8,
+     *                     example="password123"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="password_confirmation",
+     *                     type="string",
+     *                     format="password",
+     *                     example="password123"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="role",
+     *                     type="string",
+     *                     enum={"cliente","freelancer","empresa"},
+     *                     example="freelancer"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="profile_photo",
+     *                     type="string",
+     *                     format="binary",
+     *                     nullable=true,
+     *                     description="Foto de perfil opcional. Formatos permitidos: jpg, jpeg, png o webp. Tamaño máximo: 2MB."
+     *                 )
+     *             )
      *         )
      *     ),
      *     @OA\Response(response=201, description="Usuario registrado exitosamente"),
@@ -140,6 +194,8 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
+        $photoPath = null;
+
         try {
             $validated = $request->validate([
                 'name' => 'required|string|max:100',
@@ -149,10 +205,14 @@ class AuthController extends Controller
                 'password' => 'required|string|min:8|confirmed',
                 'role' => 'required|string|in:cliente,freelancer,empresa',
                 'phone' => 'nullable|string|max:20',
-                'profile_photo' => 'nullable|string|max:255',
+                'profile_photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             ]);
 
-            $user = DB::transaction(function () use ($validated) {
+            if ($request->hasFile('profile_photo')) {
+                $photoPath = $request->file('profile_photo')->store('profile_photos', 'public');
+            }
+
+            $user = DB::transaction(function () use ($validated, $photoPath) {
                 $role = Role::where('name', $validated['role'])->first();
 
                 if (! $role) {
@@ -166,7 +226,7 @@ class AuthController extends Controller
                     'email' => $validated['email'],
                     'password' => Hash::make($validated['password']),
                     'phone' => $validated['phone'] ?? null,
-                    'profile_photo' => $validated['profile_photo'] ?? null,
+                    'profile_photo' => $photoPath,
                     'is_active' => true,
                 ]);
 
@@ -197,6 +257,10 @@ class AuthController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
+            if ($photoPath) {
+                Storage::disk('public')->delete($photoPath);
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error al registrar usuario',
@@ -323,7 +387,17 @@ class AuthController extends Controller
             'maternal_last_name' => $user->maternal_last_name,
             'email' => $user->email,
             'phone' => $user->phone,
+
+            // Ruta interna guardada en BD:
+            // Ejemplo: profile_photos/abc123.jpg
             'profile_photo' => $user->profile_photo,
+
+            // URL lista para usar en el frontend:
+            // Ejemplo: http://127.0.0.1:8000/storage/profile_photos/abc123.jpg
+            'profile_photo_url' => $user->profile_photo
+                ? asset(Storage::url($user->profile_photo))
+                : null,
+
             'is_active' => $user->is_active,
             'role' => $role ? [
                 'id' => $role->id,

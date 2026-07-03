@@ -23,7 +23,8 @@ use App\Http\Controllers\Api\ChatBotController;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/chatbot/message', [ChatBotController::class, 'sendMessage']);
+Route::post('/chatbot/message', [ChatBotController::class, 'sendPublicMessage'])
+    ->middleware('throttle:20,1');
 
 /*
 |--------------------------------------------------------------------------
@@ -56,6 +57,8 @@ Route::middleware('auth.api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh', [AuthController::class, 'refresh']);
 
+    Route::post('/chatbot/auth-message', [ChatBotController::class, 'sendAuthMessage'])
+        ->middleware('throttle:30,1');
     /*
     |--------------------------------------------------------------------------
     | Activity Logs
