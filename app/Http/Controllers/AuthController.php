@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Tymon\JWTAuth\Exceptions\JWTException;
-use Tymon\JWTAuth\Facades\JWTAuth;
-use App\Services\ActivityLoggerService;
-use App\Models\User;
 use App\Models\Role;
+use App\Models\User;
+use App\Services\ActivityLoggerService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
+use Tymon\JWTAuth\Exceptions\JWTException;
 
 /**
  * @OA\Info(
@@ -56,6 +57,8 @@ class AuthController extends Controller
      *     path="/api/login",
      *     operationId="login",
      *     tags={"Auth"},
+     *     summary="Iniciar sesión",
+     *     description="Inicia sesión y retorna un token JWT",
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
@@ -64,8 +67,9 @@ class AuthController extends Controller
      *             @OA\Property(property="password", type="string", example="admin123")
      *         )
      *     ),
-     *     @OA\Response(response=200, description="Login exitoso, retorna JWT token"),
-     *     @OA\Response(response=401, description="Credenciales inválidas")
+     *     @OA\Response(response=200, description="Login exitoso"),
+     *     @OA\Response(response=401, description="Credenciales inválidas"),
+     *     @OA\Response(response=500, description="Error interno del servidor")
      * )
      */
     public function login(Request $request)
@@ -75,13 +79,10 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $credentials = $request->only('email', 'password');
-
-        /** @var \Tymon\JWTAuth\JWTGuard $guard */
         $guard = auth('api');
 
         try {
-            if (! $token = $guard->attempt($credentials)) {
+            if (! $token = $guard->attempt($validated)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Credenciales inválidas',
@@ -91,13 +92,13 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'No se pudo crear el token',
+                'error' => $e->getMessage(),
             ], 500);
         }
 
         $user = $guard->user();
         $user->load('roles');
 
-        // Registrar actividad
         ActivityLoggerService::logLogin($user->id);
 
         return response()->json([
@@ -105,17 +106,100 @@ class AuthController extends Controller
             'message' => 'Login exitoso',
             'data' => [
                 'token' => $token,
-                'id' => $user->id,
-                'nombre' => $user->nombre,
-                'apellido' => $user->apellido,
-                'email' => $user->email,
-                'tipo_cuenta' => $user->tipo_cuenta,
-                'rol' => $user->roles->first() ? [
-                    'id' => $user->roles->first()->id,
-                    'nombre' => $user->roles->first()->nombre,
-                ] : null,
+                'user' => $this->formatUserResponse($user),
             ],
         ]);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/register",
+     *     operationId="register",
+     *     tags={"Auth"},
+     *     summary="Registrar usuario",
+     *     description="Registra un nuevo usuario y asigna un solo rol principal. El rol admin no puede registrarse desde este endpoint.",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","last_name","email","password","password_confirmation","role"},
+     *             @OA\Property(property="name", type="string", example="Adrian"),
+     *             @OA\Property(property="last_name", type="string", example="Vite"),
+     *             @OA\Property(property="email", type="string", format="email", example="adrian@test.com"),
+     *             @OA\Property(property="password", type="string", example="password123"),
+     *             @OA\Property(property="password_confirmation", type="string", example="password123"),
+     *             @OA\Property(property="role", type="string", enum={"cliente","freelancer","empresa"}, example="freelancer"),
+     *             @OA\Property(property="phone", type="string", example="7712233445"),
+     *             @OA\Property(property="profile_photo", type="string", example="https://example.com/photo.jpg")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Usuario registrado exitosamente"),
+     *     @OA\Response(response=422, description="Datos inválidos"),
+     *     @OA\Response(response=500, description="Error interno del servidor")
+     * )
+     */
+    public function register(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:100',
+                'last_name' => 'required|string|max:100',
+                'email' => 'required|email|max:150|unique:users,email',
+                'password' => 'required|string|min:8|confirmed',
+                'role' => 'required|string|in:cliente,freelancer,empresa',
+                'phone' => 'nullable|string|max:20',
+                'profile_photo' => 'nullable|string|max:255',
+            ]);
+
+            $user = DB::transaction(function () use ($validated) {
+                $role = Role::where('name', $validated['role'])->first();
+
+                if (! $role) {
+                    throw new \Exception('El rol seleccionado no existe: ' . $validated['role']);
+                }
+
+                $user = User::create([
+                    'name' => $validated['name'],
+                    'last_name' => $validated['last_name'],
+                    'email' => $validated['email'],
+                    'password' => Hash::make($validated['password']),
+                    'phone' => $validated['phone'] ?? null,
+                    'profile_photo' => $validated['profile_photo'] ?? null,
+                    'is_active' => true,
+                ]);
+
+                $user->roles()->sync([
+                    $role->id => [
+                        'assigned_at' => now(),
+                    ],
+                ]);
+
+                ActivityLoggerService::logRegister($user->id, $user->email);
+
+                $user->load('roles');
+
+                return $user;
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Usuario registrado exitosamente',
+                'data' => [
+                    'user' => $this->formatUserResponse($user),
+                ],
+            ], 201);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Datos inválidos',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al registrar usuario',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -123,24 +207,15 @@ class AuthController extends Controller
      *     path="/api/me",
      *     operationId="me",
      *     tags={"Auth"},
+     *     summary="Usuario autenticado",
+     *     description="Obtiene los datos del usuario autenticado",
      *     security={{"bearerAuth":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="Datos del usuario autenticado",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="data", type="object")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="No autorizado. Token requerido o inválido"
-     *     )
+     *     @OA\Response(response=200, description="Datos del usuario autenticado"),
+     *     @OA\Response(response=401, description="No autorizado")
      * )
      */
     public function me()
     {
-        /** @var \App\Models\User|null $user */
         $user = auth('api')->user();
 
         if (! $user) {
@@ -156,16 +231,7 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Datos del usuario',
             'data' => [
-                'id' => $user->id,
-                'nombre' => $user->nombre,
-                'apellido' => $user->apellido,
-                'email' => $user->email,
-                'tipo_cuenta' => $user->tipo_cuenta,
-                'activo' => $user->activo,
-                'roles' => $user->roles->map(fn($role) => [
-                    'id' => $role->id,
-                    'nombre' => $role->nombre,
-                ])->toArray(),
+                'user' => $this->formatUserResponse($user),
             ],
         ]);
     }
@@ -175,15 +241,12 @@ class AuthController extends Controller
      *     path="/api/logout",
      *     operationId="logout",
      *     tags={"Auth"},
+     *     summary="Cerrar sesión",
+     *     description="Cierra la sesión del usuario autenticado",
      *     security={{"bearerAuth":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="Sesión cerrada exitosamente"
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="No autorizado. Token requerido o inválido"
-     *     )
+     *     @OA\Response(response=200, description="Sesión cerrada exitosamente"),
+     *     @OA\Response(response=401, description="No autorizado"),
+     *     @OA\Response(response=500, description="Error interno del servidor")
      * )
      */
     public function logout()
@@ -191,24 +254,23 @@ class AuthController extends Controller
         $user = auth('api')->user();
 
         try {
-            /** @var \Tymon\JWTAuth\JWTGuard $guard */
             $guard = auth('api');
             $guard->logout();
         } catch (JWTException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'No se pudo cerrar sesión',
+                'error' => $e->getMessage(),
             ], 500);
         }
 
-        // Registrar actividad
         if ($user) {
             ActivityLoggerService::logLogout($user->id);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Sesión cerrada',
+            'message' => 'Sesión cerrada exitosamente',
         ]);
     }
 
@@ -217,112 +279,53 @@ class AuthController extends Controller
      *     path="/api/refresh",
      *     operationId="refresh",
      *     tags={"Auth"},
+     *     summary="Refrescar token",
+     *     description="Genera un nuevo token JWT",
      *     security={{"bearerAuth":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="Token refrescado exitosamente",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="token", type="string")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="No autorizado. Token requerido o inválido"
-     *     )
+     *     @OA\Response(response=200, description="Token refrescado exitosamente"),
+     *     @OA\Response(response=401, description="No autorizado"),
+     *     @OA\Response(response=500, description="Error interno del servidor")
      * )
      */
     public function refresh()
     {
         try {
-            /** @var \Tymon\JWTAuth\JWTGuard $guard */
             $guard = auth('api');
             $newToken = $guard->refresh();
         } catch (JWTException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'No se pudo refrescar el token',
+                'error' => $e->getMessage(),
             ], 500);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Token refrescado',
-            'data' => ['token' => $newToken],
+            'message' => 'Token refrescado exitosamente',
+            'data' => [
+                'token' => $newToken,
+            ],
         ]);
     }
 
-    /**
-     * Registrar un nuevo usuario.
-     *
-     * @OA\Post(
-     *     path="/api/register",
-     *     operationId="register",
-     *     tags={"Auth"},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"nombre","apellido","email","password","tipo_cuenta"},
-     *             @OA\Property(property="nombre", type="string"),
-     *             @OA\Property(property="apellido", type="string"),
-     *             @OA\Property(property="email", type="string", format="email"),
-     *             @OA\Property(property="password", type="string"),
-     *             @OA\Property(property="tipo_cuenta", type="string", enum={"Cliente","Freelancer","Empresa"})
-     *         )
-     *     ),
-     *     @OA\Response(response=201, description="Usuario registrado exitosamente"),
-     *     @OA\Response(response=422, description="Datos inválidos")
-     * )
-     */
-    public function register(Request $request)
+    private function formatUserResponse(User $user): array
     {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:100',
-            'apellido' => 'required|string|max:100',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
-            'tipo_cuenta' => 'required|in:Cliente,Freelancer,Empresa',
-        ]);
+        $role = $user->roles->first();
 
-        // Crear usuario
-        $user = User::create([
-            'nombre' => $validated['nombre'],
-            'apellido' => $validated['apellido'],
-            'email' => $validated['email'],
-            'password_hash' => Hash::make($validated['password']),
-            'tipo_cuenta' => $validated['tipo_cuenta'],
-            'activo' => true,
-        ]);
-
-        // Asignar roles por defecto según tipo de cuenta
-        $roles = [Role::where('nombre', 'user')->first()?->id];
-
-        if ($validated['tipo_cuenta'] === 'Freelancer') {
-            $roles[] = Role::where('nombre', 'freelancer')->first()?->id;
-        } elseif ($validated['tipo_cuenta'] === 'Empresa') {
-            $roles[] = Role::where('nombre', 'empresa')->first()?->id;
-        }
-
-        $roles = array_filter($roles);
-        if (!empty($roles)) {
-            $user->roles()->attach($roles);
-        }
-
-        // Registrar actividad
-        ActivityLoggerService::logRegister($user->id, $user->email);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Usuario registrado exitosamente',
-            'data' => [
-                'id' => $user->id,
-                'nombre' => $user->nombre,
-                'apellido' => $user->apellido,
-                'email' => $user->email,
-                'tipo_cuenta' => $user->tipo_cuenta,
-            ]
-        ], 201);
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'last_name' => $user->last_name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'profile_photo' => $user->profile_photo,
+            'is_active' => $user->is_active,
+            'role' => $role ? [
+                'id' => $role->id,
+                'name' => $role->name,
+                'description' => $role->description,
+            ] : null,
+        ];
     }
 }

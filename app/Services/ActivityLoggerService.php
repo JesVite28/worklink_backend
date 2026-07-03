@@ -4,59 +4,50 @@ namespace App\Services;
 
 use App\Models\ActivityLog;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
 
 class ActivityLoggerService
 {
     /**
-     * Registra una actividad en el log de auditoría.
-     *
-     * @param string $accion       Acción realizada (LOGIN, LOGOUT, CREATE, UPDATE, DELETE, etc.)
-     * @param string $modulo       Módulo del sistema (USUARIOS, ROLES, PEDIDOS, etc.)
-     * @param string $entidad      Nombre de la tabla/entidad (users, roles, etc.)
-     * @param int|null $entidadId  ID de la entidad afectada
-     * @param string|null $descripcion Descripción detallada de la acción
-     * @param int|null $usuarioId  ID del usuario (si es null, usa el usuario autenticado)
-     * 
-     * @return ActivityLog Modelo de log creado
+     * Register an activity in the audit log.
      */
     public static function log(
-        string $accion,
-        string $modulo,
-        string $entidad,
-        ?int $entidadId = null,
-        ?string $descripcion = null,
-        ?int $usuarioId = null
+        string $action,
+        string $module,
+        string $entity,
+        ?int $entityId = null,
+        ?string $description = null,
+        ?int $userId = null
     ): ActivityLog {
         try {
-            // Usar usuario autenticado si no se especifica uno
-            if ($usuarioId === null) {
+            if ($userId === null) {
                 $user = Auth::guard('api')->user();
-                $usuarioId = $user?->id;
+                $userId = $user?->id;
             }
 
-            // Si no hay usuario autenticado, no registrar (opcional: cambiar según necesidad)
-            if ($usuarioId === null) {
+            if ($userId === null) {
                 return new ActivityLog();
             }
 
             return ActivityLog::create([
-                'usuario_id' => $usuarioId,
-                'accion' => $accion,
-                'modulo' => $modulo,
-                'entidad' => $entidad,
-                'entidad_id' => $entidadId,
-                'descripcion' => $descripcion,
+                'user_id' => $userId,
+                'action' => $action,
+                'module' => $module,
+                'entity' => $entity,
+                'entity_id' => $entityId,
+                'description' => $description,
                 'ip_address' => Request::ip(),
                 'user_agent' => Request::userAgent(),
-                'creado_en' => now(),
             ]);
         } catch (\Exception $e) {
-            // Log interno en caso de error, pero no interrumpir la aplicación
-            \Illuminate\Support\Facades\Log::error('Error al registrar actividad:', [
+            Log::error('Error registering activity log:', [
                 'error' => $e->getMessage(),
-                'accion' => $accion,
-                'modulo' => $modulo,
+                'action' => $action,
+                'module' => $module,
+                'entity' => $entity,
+                'entity_id' => $entityId,
+                'user_id' => $userId,
             ]);
 
             return new ActivityLog();
@@ -64,129 +55,129 @@ class ActivityLoggerService
     }
 
     /**
-     * Registra una acción de LOGIN.
+     * Register LOGIN action.
      */
-    public static function logLogin(?int $usuarioId = null): ActivityLog
+    public static function logLogin(?int $userId = null): ActivityLog
     {
         return self::log(
-            accion: 'LOGIN',
-            modulo: 'AUTENTICACION',
-            entidad: 'users',
-            entidadId: $usuarioId,
-            descripcion: 'Usuario inició sesión',
-            usuarioId: $usuarioId
+            action: 'LOGIN',
+            module: 'AUTHENTICATION',
+            entity: 'users',
+            entityId: $userId,
+            description: 'User logged in',
+            userId: $userId
         );
     }
 
     /**
-     * Registra una acción de LOGOUT.
+     * Register LOGOUT action.
      */
-    public static function logLogout(?int $usuarioId = null): ActivityLog
+    public static function logLogout(?int $userId = null): ActivityLog
     {
         return self::log(
-            accion: 'LOGOUT',
-            modulo: 'AUTENTICACION',
-            entidad: 'users',
-            entidadId: $usuarioId,
-            descripcion: 'Usuario cerró sesión',
-            usuarioId: $usuarioId
+            action: 'LOGOUT',
+            module: 'AUTHENTICATION',
+            entity: 'users',
+            entityId: $userId,
+            description: 'User logged out',
+            userId: $userId
         );
     }
 
     /**
-     * Registra una acción de REGISTRO.
+     * Register user registration action.
      */
-    public static function logRegister(int $usuarioId, string $email): ActivityLog
+    public static function logRegister(int $userId, string $email): ActivityLog
     {
         return self::log(
-            accion: 'REGISTER',
-            modulo: 'AUTENTICACION',
-            entidad: 'users',
-            entidadId: $usuarioId,
-            descripcion: "Nuevo usuario registrado: {$email}",
-            usuarioId: $usuarioId
+            action: 'REGISTER',
+            module: 'AUTHENTICATION',
+            entity: 'users',
+            entityId: $userId,
+            description: "New user registered: {$email}",
+            userId: $userId
         );
     }
 
     /**
-     * Registra una acción de CREACIÓN.
+     * Register CREATE action.
      */
     public static function logCreate(
-        string $modulo,
-        string $entidad,
-        int $entidadId,
-        string $descripcion = ''
+        string $module,
+        string $entity,
+        int $entityId,
+        string $description = ''
     ): ActivityLog {
         return self::log(
-            accion: 'CREATE',
-            modulo: $modulo,
-            entidad: $entidad,
-            entidadId: $entidadId,
-            descripcion: $descripcion ?: "Se creó un nuevo registro en {$entidad}"
+            action: 'CREATE',
+            module: $module,
+            entity: $entity,
+            entityId: $entityId,
+            description: $description ?: "A new record was created in {$entity}"
         );
     }
 
     /**
-     * Registra una acción de ACTUALIZACIÓN.
+     * Register UPDATE action.
      */
     public static function logUpdate(
-        string $modulo,
-        string $entidad,
-        int $entidadId,
-        string $descripcion = ''
+        string $module,
+        string $entity,
+        int $entityId,
+        string $description = ''
     ): ActivityLog {
         return self::log(
-            accion: 'UPDATE',
-            modulo: $modulo,
-            entidad: $entidad,
-            entidadId: $entidadId,
-            descripcion: $descripcion ?: "Se actualizó un registro en {$entidad}"
+            action: 'UPDATE',
+            module: $module,
+            entity: $entity,
+            entityId: $entityId,
+            description: $description ?: "A record was updated in {$entity}"
         );
     }
 
     /**
-     * Registra una acción de ELIMINACIÓN.
+     * Register DELETE action.
      */
     public static function logDelete(
-        string $modulo,
-        string $entidad,
-        int $entidadId,
-        string $descripcion = ''
+        string $module,
+        string $entity,
+        int $entityId,
+        string $description = ''
     ): ActivityLog {
         return self::log(
-            accion: 'DELETE',
-            modulo: $modulo,
-            entidad: $entidad,
-            entidadId: $entidadId,
-            descripcion: $descripcion ?: "Se eliminó un registro en {$entidad}"
+            action: 'DELETE',
+            module: $module,
+            entity: $entity,
+            entityId: $entityId,
+            description: $description ?: "A record was deleted in {$entity}"
         );
     }
 
     /**
-     * Obtiene los logs de actividad con filtros opcionales.
+     * Get activity logs with optional filters.
      */
     public static function getLogs(
-        ?int $usuarioId = null,
-        ?string $accion = null,
-        ?string $modulo = null,
+        ?int $userId = null,
+        ?string $action = null,
+        ?string $module = null,
         int $limit = 20
     ) {
         $query = ActivityLog::query();
 
-        if ($usuarioId) {
-            $query->where('usuario_id', $usuarioId);
+        if ($userId) {
+            $query->where('user_id', $userId);
         }
 
-        if ($accion) {
-            $query->where('accion', $accion);
+        if ($action) {
+            $query->where('action', $action);
         }
 
-        if ($modulo) {
-            $query->where('modulo', $modulo);
+        if ($module) {
+            $query->where('module', $module);
         }
 
         return $query->with('user')
-            ->latest('creado_en')
+            ->latest('created_at')
             ->paginate($limit);
     }
 }

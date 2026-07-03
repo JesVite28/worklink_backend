@@ -10,33 +10,23 @@ class Role extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nombre', 'descripcion'];
+    protected $fillable = [
+        'name',
+        'description',
+    ];
+
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 
     /**
-     * Ocultar timestamps si no se usan
-     */
-    public $timestamps = false;
-
-    /**
-     * Get the permissions for the role.
-     */
-
-    /**
-     * Get the users with this role.
-     * Relación Many-to-Many con tabla pivote 'roles_usuarios'.
+     * Users assigned to this role.
      */
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'roles_usuarios', 'rol_id', 'usuario_id')
-            ->withPivot('asignado_en')
+        return $this->belongsToMany(User::class, 'roles_users', 'role_id', 'user_id')
+            ->withPivot('assigned_at')
             ->withTimestamps();
-    }
-
-    /**
-     * Check if role has permission.
-     */
-    public function hasPermission(string $permission): bool
-    {
-        return $this->permissions()->where('name', $permission)->exists();
     }
 }

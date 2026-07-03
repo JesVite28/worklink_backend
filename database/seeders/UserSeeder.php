@@ -14,91 +14,75 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Obtener roles
-        $adminRole = Role::where('nombre', 'admin')->first();
-        $userRole = Role::where('nombre', 'user')->first();
-        $empresaRole = Role::where('nombre', 'empresa')->first();
-        $freelancerRole = Role::where('nombre', 'freelancer')->first();
-
-        // Usuario Admin
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@worklink.com'],
+        $this->createUserWithRole(
             [
-                'nombre' => 'Administrador',
-                'apellido' => 'Sistema',
-                'password_hash' => Hash::make('admin123'),
-                'tipo_cuenta' => 'Empresa',
-                'telefono' => '+1234567890',
-                'activo' => true,
-            ]
+                'name' => 'Administrador',
+                'last_name' => 'Sistema',
+                'email' => 'admin@worklink.com',
+                'password' => Hash::make('admin123'),
+                'phone' => '+1234567890',
+                'is_active' => true,
+            ],
+            'admin'
         );
 
-        // Asignar roles (admin + empresa)
-        if ($adminRole) {
-            $admin->roles()->syncWithoutDetaching($adminRole->id);
-        }
-        if ($empresaRole) {
-            $admin->roles()->syncWithoutDetaching($empresaRole->id);
-        }
-
-        // Usuario Cliente
-        $cliente = User::firstOrCreate(
-            ['email' => 'cliente@worklink.com'],
+        $this->createUserWithRole(
             [
-                'nombre' => 'Juan',
-                'apellido' => 'Cliente',
-                'password_hash' => Hash::make('cliente123'),
-                'tipo_cuenta' => 'Cliente',
-                'telefono' => '+0987654321',
-                'activo' => true,
-            ]
+                'name' => 'Juan',
+                'last_name' => 'Cliente',
+                'email' => 'cliente@worklink.com',
+                'password' => Hash::make('cliente123'),
+                'phone' => '+0987654321',
+                'is_active' => true,
+            ],
+            'cliente'
         );
 
-        // Asignar rol user
-        if ($userRole) {
-            $cliente->roles()->syncWithoutDetaching($userRole->id);
-        }
-
-        // Usuario Freelancer
-        $freelancer = User::firstOrCreate(
-            ['email' => 'freelancer@worklink.com'],
+        $this->createUserWithRole(
             [
-                'nombre' => 'María',
-                'apellido' => 'Freelancer',
-                'password_hash' => Hash::make('freelancer123'),
-                'tipo_cuenta' => 'Freelancer',
-                'telefono' => '+1122334455',
-                'activo' => true,
-            ]
+                'name' => 'María',
+                'last_name' => 'Freelancer',
+                'email' => 'freelancer@worklink.com',
+                'password' => Hash::make('freelancer123'),
+                'phone' => '+1122334455',
+                'is_active' => true,
+            ],
+            'freelancer'
         );
 
-        // Asignar roles (freelancer + user)
-        if ($userRole) {
-            $freelancer->roles()->syncWithoutDetaching($userRole->id);
-        }
-        if ($freelancerRole) {
-            $freelancer->roles()->syncWithoutDetaching($freelancerRole->id);
+        $this->createUserWithRole(
+            [
+                'name' => 'TechCorp',
+                'last_name' => 'Solutions',
+                'email' => 'empresa@worklink.com',
+                'password' => Hash::make('empresa123'),
+                'phone' => '+5556667777',
+                'is_active' => true,
+            ],
+            'empresa'
+        );
+    }
+
+    /**
+     * Create or update a user and assign only one role.
+     */
+    private function createUserWithRole(array $userData, string $roleName): void
+    {
+        $role = Role::where('name', $roleName)->first();
+
+        if (! $role) {
+            return;
         }
 
-        // Usuario Empresa
-        $empresa = User::firstOrCreate(
-            ['email' => 'empresa@worklink.com'],
-            [
-                'nombre' => 'TechCorp',
-                'apellido' => 'Solutions',
-                'password_hash' => Hash::make('empresa123'),
-                'tipo_cuenta' => 'Empresa',
-                'telefono' => '+5556667777',
-                'activo' => true,
-            ]
+        $user = User::updateOrCreate(
+            ['email' => $userData['email']],
+            $userData
         );
 
-        // Asignar roles (empresa + user)
-        if ($userRole) {
-            $empresa->roles()->syncWithoutDetaching($userRole->id);
-        }
-        if ($empresaRole) {
-            $empresa->roles()->syncWithoutDetaching($empresaRole->id);
-        }
+        $user->roles()->sync([
+            $role->id => [
+                'assigned_at' => now(),
+            ],
+        ]);
     }
 }

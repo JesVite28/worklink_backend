@@ -5,11 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Service extends Model
 {
     use HasFactory, SoftDeletes;
-    //
+
     protected $fillable = [
         'freelancer_id',
         'title',
@@ -21,11 +22,18 @@ class Service extends Model
     ];
 
     protected $casts = [
+        'freelancer_id' => 'integer',
         'is_active' => 'boolean',
         'price' => 'decimal:2',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
-    public function freelancerProfile()
+    /**
+     * Freelancer profile that owns this service.
+     */
+    public function freelancerProfile(): BelongsTo
     {
         return $this->belongsTo(FreelancerProfile::class, 'freelancer_id');
     }

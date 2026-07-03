@@ -35,4 +35,28 @@ return [
         ],
     ],
 
+    // 'gemini' => [
+    //     'api_key' => env('GEMINI_API_KEY'),
+    //     'model' => env('GEMINI_MODEL', 'gemini-2.0-flash'),
+    // ],
+
+    // 'ollama' => [
+    //     'url' => env('OLLAMA_URL', 'http://localhost:11434'),
+    //     'model' => env('OLLAMA_MODEL', 'llama3.2:1b'),
+    // ],
+
+    // 'ai' => [
+    //     'provider' => env('AI_PROVIDER', 'ollama'),
+    // ],
+    'openrouter' => [
+        'api_key' => env('OPENROUTER_API_KEY'),
+        'model' => env('OPENROUTER_MODEL', 'openrouter/free'),
+        'site_url' => env('OPENROUTER_SITE_URL', 'http://localhost:8000'),
+        'app_name' => env('OPENROUTER_APP_NAME', 'WorkLink'),
+    ],
+
+    'ai' => [
+        'provider' => env('AI_PROVIDER', 'openrouter'),
+    ],
+
 ];

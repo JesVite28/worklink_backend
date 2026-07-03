@@ -9,30 +9,29 @@ class ActivityLog extends Model
 {
     protected $table = 'activity_logs';
 
-    public $timestamps = false;
-
     protected $fillable = [
-        'usuario_id',
-        'accion',
-        'modulo',
-        'entidad',
-        'entidad_id',
-        'descripcion',
+        'user_id',
+        'action',
+        'module',
+        'entity',
+        'entity_id',
+        'description',
         'ip_address',
         'user_agent',
-        'creado_en',
     ];
 
     protected $casts = [
-        'creado_en' => 'datetime',
-        'entidad_id' => 'integer',
+        'user_id' => 'integer',
+        'entity_id' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
-     * Get the user who performed the activity.
+     * User who performed the activity.
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'usuario_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

@@ -27,31 +27,56 @@
                         "description": "Registros por página",
                         "schema": {
                             "type": "integer",
-                            "default": 20
+                            "default": 20,
+                            "example": 20
                         }
                     },
                     {
-                        "name": "accion",
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "Filtrar por ID del usuario",
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "action",
                         "in": "query",
                         "description": "Filtrar por acción",
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "enum": [
+                                "LOGIN",
+                                "LOGOUT",
+                                "REGISTER",
+                                "CREATE",
+                                "UPDATE",
+                                "DELETE",
+                                "EXPORT",
+                                "IMPORT",
+                                "DOWNLOAD",
+                                "VIEW"
+                            ],
+                            "example": "LOGIN"
                         }
                     },
                     {
-                        "name": "modulo",
+                        "name": "module",
                         "in": "query",
                         "description": "Filtrar por módulo",
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "example": "AUTHENTICATION"
                         }
                     },
                     {
-                        "name": "usuario_id",
+                        "name": "entity",
                         "in": "query",
-                        "description": "Filtrar por usuario",
+                        "description": "Filtrar por entidad",
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "example": "users"
                         }
                     }
                 ],
@@ -81,6 +106,9 @@
                     },
                     "401": {
                         "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "422": {
+                        "description": "Datos inválidos"
                     }
                 },
                 "security": [
@@ -96,8 +124,20 @@
                     "Activity Logs"
                 ],
                 "summary": "Resumen de actividades",
-                "description": "Obtener resumen de actividades por módulo.",
+                "description": "Retorna un resumen de actividades por acción y módulo.",
                 "operationId": "e7559352304085c4fa90de33a3ac2e62",
+                "parameters": [
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "description": "Cantidad de días hacia atrás para generar el resumen",
+                        "schema": {
+                            "type": "integer",
+                            "default": 7,
+                            "example": 7
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Resumen de actividades obtenido exitosamente",
@@ -124,6 +164,9 @@
                     },
                     "401": {
                         "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "422": {
+                        "description": "Datos inválidos"
                     }
                 },
                 "security": [
@@ -133,11 +176,53 @@
                 ]
             }
         },
+        "/api/chatbot/message": {
+            "post": {
+                "tags": [
+                    "Chatbot IA"
+                ],
+                "summary": "Enviar mensaje al chatbot de WorkLink",
+                "description": "Permite enviar un mensaje al asistente inteligente de WorkLink para recibir asesoría sobre freelancers, empresas, servicios o solicitudes.",
+                "operationId": "91d30005c47186fd2b16070417bac21f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "message"
+                                ],
+                                "properties": {
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Necesito un freelancer que me haga una página web para mi restaurante"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Respuesta generada correctamente"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "500": {
+                        "description": "Error al conectar con el servicio de IA"
+                    }
+                }
+            }
+        },
         "/api/login": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
+                "summary": "Iniciar sesión",
+                "description": "Inicia sesión y retorna un token JWT",
                 "operationId": "login",
                 "requestBody": {
                     "required": true,
@@ -166,10 +251,92 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Login exitoso, retorna JWT token"
+                        "description": "Login exitoso"
                     },
                     "401": {
                         "description": "Credenciales inválidas"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
+                    }
+                }
+            }
+        },
+        "/api/register": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Registrar usuario",
+                "description": "Registra un nuevo usuario y asigna un solo rol principal. El rol admin no puede registrarse desde este endpoint.",
+                "operationId": "register",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "last_name",
+                                    "email",
+                                    "password",
+                                    "password_confirmation",
+                                    "role"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Adrian"
+                                    },
+                                    "last_name": {
+                                        "type": "string",
+                                        "example": "Vite"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "adrian@test.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    },
+                                    "role": {
+                                        "type": "string",
+                                        "enum": [
+                                            "cliente",
+                                            "freelancer",
+                                            "empresa"
+                                        ],
+                                        "example": "freelancer"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "7712233445"
+                                    },
+                                    "profile_photo": {
+                                        "type": "string",
+                                        "example": "https://example.com/photo.jpg"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Usuario registrado exitosamente"
+                    },
+                    "422": {
+                        "description": "Datos inválidos"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
                     }
                 }
             }
@@ -179,29 +346,15 @@
                 "tags": [
                     "Auth"
                 ],
+                "summary": "Usuario autenticado",
+                "description": "Obtiene los datos del usuario autenticado",
                 "operationId": "me",
                 "responses": {
                     "200": {
-                        "description": "Datos del usuario autenticado",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "data": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Datos del usuario autenticado"
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "No autorizado"
                     }
                 },
                 "security": [
@@ -216,13 +369,18 @@
                 "tags": [
                     "Auth"
                 ],
+                "summary": "Cerrar sesión",
+                "description": "Cierra la sesión del usuario autenticado",
                 "operationId": "logout",
                 "responses": {
                     "200": {
                         "description": "Sesión cerrada exitosamente"
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "No autorizado"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
                     }
                 },
                 "security": [
@@ -237,31 +395,38 @@
                 "tags": [
                     "Auth"
                 ],
+                "summary": "Refrescar token",
+                "description": "Genera un nuevo token JWT",
                 "operationId": "refresh",
                 "responses": {
                     "200": {
-                        "description": "Token refrescado exitosamente",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "token": {
-                                                    "type": "string"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Token refrescado exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/availabilities": {
+            "get": {
+                "tags": [
+                    "Availabilities"
+                ],
+                "summary": "Listar disponibilidades",
+                "description": "Retorna todas las disponibilidades con perfil freelancer, usuario y rol.",
+                "operationId": "listAvailabilities",
+                "responses": {
+                    "200": {
+                        "description": "Disponibilidades obtenidas exitosamente"
                     },
                     "401": {
                         "description": "No autorizado. Token requerido o inválido"
@@ -272,98 +437,26 @@
                         "bearerAuth": []
                     }
                 ]
-            }
-        },
-        "/api/register": {
-            "post": {
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Registrar un nuevo usuario.",
-                "operationId": "register",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "nombre",
-                                    "apellido",
-                                    "email",
-                                    "password",
-                                    "tipo_cuenta"
-                                ],
-                                "properties": {
-                                    "nombre": {
-                                        "type": "string"
-                                    },
-                                    "apellido": {
-                                        "type": "string"
-                                    },
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email"
-                                    },
-                                    "password": {
-                                        "type": "string"
-                                    },
-                                    "tipo_cuenta": {
-                                        "type": "string",
-                                        "enum": [
-                                            "Cliente",
-                                            "Freelancer",
-                                            "Empresa"
-                                        ]
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Usuario registrado exitosamente"
-                    },
-                    "422": {
-                        "description": "Datos inválidos"
-                    }
-                }
-            }
-        },
-        "/api/availabilities": {
-            "get": {
-                "tags": [
-                    "Availabilities"
-                ],
-                "summary": "Obtener lista de disponibilidades",
-                "description": "Retorna una lista de todos los rangos de disponibilidad con su perfil de freelancer",
-                "operationId": "4923e93a277dce22f278bf32384aeb30",
-                "responses": {
-                    "200": {
-                        "description": "Operación exitosa"
-                    }
-                }
             },
             "post": {
                 "tags": [
                     "Availabilities"
                 ],
-                "summary": "Crear un nuevo rango de disponibilidad",
-                "description": "Crea un registro de disponibilidad en la base de datos",
-                "operationId": "11897ab453d7a16dd9dafdc9f98dcd91",
+                "summary": "Crear disponibilidad",
+                "description": "Crea un rango de disponibilidad para un perfil freelancer. Un freelancer crea disponibilidad para su propio perfil; un admin puede indicar freelancer_id.",
+                "operationId": "createAvailability",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "freelancer_id",
                                     "start_date",
                                     "end_date"
                                 ],
                                 "properties": {
                                     "freelancer_id": {
+                                        "description": "Solo requerido si el usuario autenticado es admin",
                                         "type": "integer",
                                         "example": 1
                                     },
@@ -396,10 +489,21 @@
                     "201": {
                         "description": "Disponibilidad creada exitosamente"
                     },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
                     "422": {
                         "description": "Error de validación"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/availabilities/{id}": {
@@ -407,9 +511,9 @@
                 "tags": [
                     "Availabilities"
                 ],
-                "summary": "Obtener una disponibilidad específica",
-                "description": "Retorna los detalles de un registro específico de disponibilidad buscado por su ID",
-                "operationId": "ef8584656f36621e848ea69225254810",
+                "summary": "Obtener disponibilidad por ID",
+                "description": "Retorna los detalles de una disponibilidad.",
+                "operationId": "showAvailability",
                 "parameters": [
                     {
                         "name": "id",
@@ -417,34 +521,44 @@
                         "description": "ID de la disponibilidad",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Operación exitosa"
+                        "description": "Disponibilidad obtenida exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
                     },
                     "404": {
                         "description": "Disponibilidad no encontrada"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "put": {
                 "tags": [
                     "Availabilities"
                 ],
-                "summary": "Actualizar una disponibilidad horaria",
-                "description": "Actualiza las fechas o el estado de una disponibilidad existente",
-                "operationId": "e63fbe38f9f205a4eee29f1b77c6434e",
+                "summary": "Actualizar disponibilidad",
+                "description": "Actualiza las fechas o el estado de una disponibilidad existente.",
+                "operationId": "updateAvailability",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID de la disponibilidad a actualizar",
+                        "description": "ID de la disponibilidad",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
@@ -482,35 +596,64 @@
                 "responses": {
                     "200": {
                         "description": "Disponibilidad actualizada correctamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Disponibilidad no encontrada"
+                    },
+                    "422": {
+                        "description": "Error de validación"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
                     "Availabilities"
                 ],
-                "summary": "Eliminar una disponibilidad horaria",
-                "description": "Aplica un Soft Delete al registro de disponibilidad especificado",
-                "operationId": "a5df618e03fd593a7088a5d8453cf30d",
+                "summary": "Eliminar disponibilidad",
+                "description": "Elimina una disponibilidad existente.",
+                "operationId": "deleteAvailability",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID de la disponibilidad a eliminar",
+                        "description": "ID de la disponibilidad",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Disponibilidad eliminada"
+                        "description": "Disponibilidad eliminada correctamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
                     },
                     "404": {
-                        "description": "Disponibilidad no encontrado"
+                        "description": "Disponibilidad no encontrada"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/briefcases": {
@@ -518,33 +661,41 @@
                 "tags": [
                     "Briefcases"
                 ],
-                "summary": "Obtener lista de portafolios",
-                "description": "Retorna una lista de todos los proyectos de portafolio con su perfil de freelancer",
-                "operationId": "b56d76c2c0a99799ae7b7903e3191739",
+                "summary": "Listar portafolios",
+                "description": "Retorna todos los proyectos de portafolio con su perfil freelancer, usuario y rol.",
+                "operationId": "listBriefcases",
                 "responses": {
                     "200": {
-                        "description": "Operación exitosa"
+                        "description": "Portafolios obtenidos exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "post": {
                 "tags": [
                     "Briefcases"
                 ],
-                "summary": "Crear un nuevo proyecto en el portafolio",
-                "description": "Crea un registro de portafolio en la base de datos",
-                "operationId": "7c6440bcd5d79c895f552392af0c75e9",
+                "summary": "Crear proyecto de portafolio",
+                "description": "Crea un proyecto en el portafolio de un freelancer. Un freelancer crea proyectos para su propio perfil; un admin puede indicar freelancer_id.",
+                "operationId": "createBriefcase",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "freelancer_id",
                                     "title"
                                 ],
                                 "properties": {
                                     "freelancer_id": {
+                                        "description": "Solo requerido si el usuario autenticado es admin",
                                         "type": "integer",
                                         "example": 1
                                     },
@@ -554,13 +705,13 @@
                                     },
                                     "description": {
                                         "type": "string",
-                                        "example": "Desarrollo completo de una tienda online..."
+                                        "example": "Desarrollo completo de una tienda online"
                                     },
-                                    "url_image": {
+                                    "image_url": {
                                         "type": "string",
                                         "example": "https://misitio.com/imagen.jpg"
                                     },
-                                    "url_proyecto": {
+                                    "project_url": {
                                         "type": "string",
                                         "example": "https://github.com/usuario/repo"
                                     }
@@ -574,10 +725,21 @@
                     "201": {
                         "description": "Proyecto creado exitosamente"
                     },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
                     "422": {
                         "description": "Error de validación"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/briefcases/{id}": {
@@ -585,9 +747,9 @@
                 "tags": [
                     "Briefcases"
                 ],
-                "summary": "Obtener un proyecto específico",
-                "description": "Retorna los detalles de un proyecto de portafolio buscado por su ID",
-                "operationId": "886ac191c884a617565f8e8d36bf2f22",
+                "summary": "Obtener proyecto de portafolio por ID",
+                "description": "Retorna los detalles de un proyecto de portafolio.",
+                "operationId": "showBriefcase",
                 "parameters": [
                     {
                         "name": "id",
@@ -595,34 +757,44 @@
                         "description": "ID del proyecto",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Operación exitosa"
+                        "description": "Proyecto obtenido exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
                     },
                     "404": {
                         "description": "Proyecto no encontrado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "put": {
                 "tags": [
                     "Briefcases"
                 ],
-                "summary": "Actualizar un proyecto del portafolio",
-                "description": "Actualiza la información de un proyecto existente",
-                "operationId": "6ba200931f2fb95bb3355345af0ba4f8",
+                "summary": "Actualizar proyecto de portafolio",
+                "description": "Actualiza la información de un proyecto existente.",
+                "operationId": "updateBriefcase",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID del proyecto a actualizar",
+                        "description": "ID del proyecto",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
@@ -631,23 +803,20 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "title"
-                                ],
                                 "properties": {
                                     "title": {
                                         "type": "string",
-                                        "example": "E-commerce en Laravel (Actualizado)"
+                                        "example": "E-commerce en Laravel actualizado"
                                     },
                                     "description": {
                                         "type": "string",
-                                        "example": "Nueva descripción del proyecto..."
+                                        "example": "Nueva descripción del proyecto"
                                     },
-                                    "url_image": {
+                                    "image_url": {
                                         "type": "string",
                                         "example": "https://misitio.com/nueva_imagen.jpg"
                                     },
-                                    "url_proyecto": {
+                                    "project_url": {
                                         "type": "string",
                                         "example": "https://github.com/usuario/repo_actualizado"
                                     }
@@ -660,35 +829,64 @@
                 "responses": {
                     "200": {
                         "description": "Proyecto actualizado correctamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Proyecto no encontrado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
                     "Briefcases"
                 ],
-                "summary": "Eliminar un proyecto del portafolio",
-                "description": "Aplica un Soft Delete al proyecto especificado",
-                "operationId": "0110e6846287d25b2623e86d2024e9aa",
+                "summary": "Eliminar proyecto de portafolio",
+                "description": "Elimina un proyecto del portafolio.",
+                "operationId": "deleteBriefcase",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID del proyecto a eliminar",
+                        "description": "ID del proyecto",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Proyecto eliminado"
+                        "description": "Proyecto eliminado correctamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
                     },
                     "404": {
                         "description": "Proyecto no encontrado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/contracts": {
@@ -696,22 +894,30 @@
                 "tags": [
                     "Contracts"
                 ],
-                "summary": "Obtener lista de contratos",
-                "description": "Retorna una lista de todas las contrataciones con su solicitud origen",
-                "operationId": "1ab3a5b4a5e2aafb0f49ce993ee8a56a",
+                "summary": "Listar contratos",
+                "description": "Retorna los contratos según el usuario autenticado y su rol.",
+                "operationId": "listContracts",
                 "responses": {
                     "200": {
-                        "description": "Operación exitosa"
+                        "description": "Contratos obtenidos exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "post": {
                 "tags": [
                     "Contracts"
                 ],
-                "summary": "Crear un nuevo contrato",
-                "description": "Formaliza una solicitud de contratación en un contrato activo",
-                "operationId": "ec9937d8f85a0ef70236302888ea421e",
+                "summary": "Crear contrato",
+                "description": "Formaliza una solicitud de contratación aceptada en un contrato.",
+                "operationId": "createContract",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -760,8 +966,22 @@
                 "responses": {
                     "201": {
                         "description": "Contrato creado exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "422": {
+                        "description": "Error de validación"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/contracts/{id}": {
@@ -769,56 +989,89 @@
                 "tags": [
                     "Contracts"
                 ],
-                "summary": "Obtener detalles de un contrato",
-                "operationId": "0551b349162da83031f7c5f1eac63c41",
+                "summary": "Obtener contrato por ID",
+                "description": "Retorna los detalles de un contrato.",
+                "operationId": "showContract",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID del contrato",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Operación exitosa"
+                        "description": "Contrato obtenido exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Contrato no encontrado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "put": {
                 "tags": [
                     "Contracts"
                 ],
-                "summary": "Actualizar información o estado de un contrato",
-                "operationId": "97bc5c1f52562dcfdfb06d871def098e",
+                "summary": "Actualizar contrato",
+                "description": "Actualiza fechas, monto o estado de un contrato.",
+                "operationId": "updateContract",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID del contrato",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
                 "requestBody": {
+                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "properties": {
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-06-18"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-07-18"
+                                    },
+                                    "total_amount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 1200.5
+                                    },
                                     "status": {
                                         "type": "string",
                                         "enum": [
                                             "in_process",
                                             "completed",
                                             "canceled"
-                                        ]
-                                    },
-                                    "end_date": {
-                                        "type": "string",
-                                        "format": "date"
+                                        ],
+                                        "example": "completed"
                                     }
                                 },
                                 "type": "object"
@@ -828,31 +1081,65 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Contrato actualizado"
+                        "description": "Contrato actualizado correctamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Contrato no encontrado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
                     "Contracts"
                 ],
-                "summary": "Eliminar un contrato (Soft Delete)",
-                "operationId": "ffec7d8c9c12722f9d5d32eb833deaed",
+                "summary": "Eliminar contrato",
+                "description": "Elimina un contrato. Solo administradores.",
+                "operationId": "deleteContract",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID del contrato",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Contrato eliminado"
+                        "description": "Contrato eliminado correctamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Contrato no encontrado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/contract-requests": {
@@ -860,38 +1147,42 @@
                 "tags": [
                     "Contract Requests"
                 ],
-                "summary": "Obtener lista de solicitudes",
-                "description": "Retorna todas las solicitudes con su cliente, freelancer y servicio relacionado",
-                "operationId": "a457ab707aea1c892a6cf5039ebbaea0",
+                "summary": "Listar solicitudes de contratación",
+                "description": "Retorna las solicitudes de contratación según el usuario autenticado y su rol.",
+                "operationId": "listContractRequests",
                 "responses": {
                     "200": {
-                        "description": "Operación exitosa"
+                        "description": "Solicitudes obtenidas exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "post": {
                 "tags": [
                     "Contract Requests"
                 ],
-                "summary": "Crear una solicitud",
-                "operationId": "9be9f92fd642ae1c7d5555d5bd055fdc",
+                "summary": "Crear solicitud de contratación",
+                "description": "Crea una solicitud para contratar un servicio. Clientes y empresas crean solicitudes; admin puede indicar client_id.",
+                "operationId": "createContractRequest",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "client_id",
-                                    "freelancer_id",
                                     "service_id",
                                     "description"
                                 ],
                                 "properties": {
                                     "client_id": {
-                                        "type": "integer",
-                                        "example": 1
-                                    },
-                                    "freelancer_id": {
+                                        "description": "Solo requerido si el usuario autenticado es admin",
                                         "type": "integer",
                                         "example": 1
                                     },
@@ -901,22 +1192,12 @@
                                     },
                                     "description": {
                                         "type": "string",
-                                        "example": "Detalles del proyecto..."
+                                        "example": "Necesito una API REST para mi plataforma."
                                     },
                                     "budget": {
                                         "type": "number",
                                         "format": "float",
                                         "example": 500
-                                    },
-                                    "status": {
-                                        "type": "string",
-                                        "enum": [
-                                            "pending",
-                                            "accepted",
-                                            "rejected",
-                                            "canceled"
-                                        ],
-                                        "example": "pending"
                                     }
                                 },
                                 "type": "object"
@@ -926,9 +1207,23 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Solicitud creada"
+                        "description": "Solicitud creada exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "422": {
+                        "description": "Error de validación"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/contract-requests/{id}": {
@@ -936,45 +1231,75 @@
                 "tags": [
                     "Contract Requests"
                 ],
-                "summary": "Obtener una solicitud específica",
-                "operationId": "46ada446af21cccbc8c3148f788da356",
+                "summary": "Obtener solicitud por ID",
+                "description": "Retorna los detalles de una solicitud de contratación.",
+                "operationId": "showContractRequest",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID de la solicitud",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Éxito"
+                        "description": "Solicitud obtenida exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Solicitud no encontrada"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "put": {
                 "tags": [
                     "Contract Requests"
                 ],
-                "summary": "Actualizar solicitud",
-                "operationId": "9f3f9d322e0d28f9f18e285ffa5f0eb0",
+                "summary": "Actualizar solicitud de contratación",
+                "description": "Actualiza la descripción, presupuesto o estado de una solicitud.",
+                "operationId": "updateContractRequest",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID de la solicitud",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
                 "requestBody": {
+                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "properties": {
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Descripción actualizada."
+                                    },
+                                    "budget": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 700
+                                    },
                                     "status": {
                                         "type": "string",
                                         "enum": [
@@ -982,11 +1307,8 @@
                                             "accepted",
                                             "rejected",
                                             "canceled"
-                                        ]
-                                    },
-                                    "budget": {
-                                        "type": "number",
-                                        "format": "float"
+                                        ],
+                                        "example": "accepted"
                                     }
                                 },
                                 "type": "object"
@@ -996,31 +1318,65 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Actualizado"
+                        "description": "Solicitud actualizada correctamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Solicitud no encontrada"
+                    },
+                    "422": {
+                        "description": "Error de validación"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
                     "Contract Requests"
                 ],
-                "summary": "Eliminar solicitud",
-                "operationId": "257981914eba2fa14ce7157e17516ba9",
+                "summary": "Eliminar solicitud de contratación",
+                "description": "Elimina una solicitud de contratación.",
+                "operationId": "deleteContractRequest",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
+                        "description": "ID de la solicitud",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Eliminado"
+                        "description": "Solicitud eliminada correctamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Solicitud no encontrada"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/profiles": {
@@ -1028,38 +1384,44 @@
                 "tags": [
                     "Freelancer Profiles"
                 ],
-                "summary": "Obtener lista de perfiles",
-                "description": "Retorna una lista de todos los perfiles de freelancers con su información de usuario",
-                "operationId": "429bf3dc98ba4b1168e478ee005a93a6",
+                "summary": "Listar perfiles de freelancers",
+                "description": "Retorna todos los perfiles de freelancers con su usuario y rol principal.",
+                "operationId": "listFreelancerProfiles",
                 "responses": {
                     "200": {
-                        "description": "Operación exitosa"
+                        "description": "Perfiles obtenidos exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "post": {
                 "tags": [
                     "Freelancer Profiles"
                 ],
-                "summary": "Crear un nuevo perfil de freelancer",
-                "description": "Crea un registro de perfil vinculado a un usuario existente",
-                "operationId": "ae8a1898321720b8fa83cd5d35a36e6e",
+                "summary": "Crear perfil de freelancer",
+                "description": "Crea un perfil de freelancer. Un freelancer crea su propio perfil; un admin puede crear el perfil indicando user_id.",
+                "operationId": "createFreelancerProfile",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "user_id"
-                                ],
                                 "properties": {
                                     "user_id": {
+                                        "description": "Solo requerido si el usuario autenticado es admin",
                                         "type": "integer",
-                                        "example": 1
+                                        "example": 3
                                     },
                                     "description": {
                                         "type": "string",
-                                        "example": "Desarrollador Full Stack con 5 años de experiencia..."
+                                        "example": "Desarrollador Full Stack con experiencia en Laravel y React"
                                     },
                                     "specialty": {
                                         "type": "string",
@@ -1072,7 +1434,7 @@
                                     },
                                     "location": {
                                         "type": "string",
-                                        "example": "Ciudad de México"
+                                        "example": "Pachuca, Hidalgo"
                                     },
                                     "available": {
                                         "type": "boolean",
@@ -1093,10 +1455,21 @@
                     "201": {
                         "description": "Perfil creado exitosamente"
                     },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
                     "422": {
                         "description": "Error de validación"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/profiles/{id}": {
@@ -1104,9 +1477,9 @@
                 "tags": [
                     "Freelancer Profiles"
                 ],
-                "summary": "Obtener el perfil completo de un freelancer",
-                "description": "Retorna los detalles del perfil, incluyendo sus servicios, portafolio y disponibilidad",
-                "operationId": "0c7703a85a8be4bcd8034d22349d6edb",
+                "summary": "Obtener perfil de freelancer por ID",
+                "description": "Retorna los detalles del perfil, incluyendo usuario, rol, servicios, portafolio y disponibilidad.",
+                "operationId": "showFreelancerProfile",
                 "parameters": [
                     {
                         "name": "id",
@@ -1114,26 +1487,35 @@
                         "description": "ID del perfil del freelancer",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Operación exitosa"
+                        "description": "Perfil obtenido exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
                     },
                     "404": {
                         "description": "Perfil no encontrado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "put": {
                 "tags": [
                     "Freelancer Profiles"
                 ],
-                "summary": "Actualizar un perfil de freelancer",
-                "description": "Actualiza la información pública del perfil (tarifa, descripción, especialidad, etc.)",
-                "operationId": "dd8486e95df10b69cf02a3ca189df163",
+                "summary": "Actualizar perfil de freelancer",
+                "description": "Actualiza la información pública del perfil.",
+                "operationId": "updateFreelancerProfile",
                 "parameters": [
                     {
                         "name": "id",
@@ -1141,7 +1523,8 @@
                         "description": "ID del perfil a actualizar",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
@@ -1153,7 +1536,7 @@
                                 "properties": {
                                     "description": {
                                         "type": "string",
-                                        "example": "Descripción actualizada..."
+                                        "example": "Descripción actualizada"
                                     },
                                     "specialty": {
                                         "type": "string",
@@ -1171,6 +1554,11 @@
                                     "available": {
                                         "type": "boolean",
                                         "example": false
+                                    },
+                                    "average_rate": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 4.8
                                     }
                                 },
                                 "type": "object"
@@ -1181,16 +1569,33 @@
                 "responses": {
                     "200": {
                         "description": "Perfil actualizado correctamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Perfil no encontrado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
                     "Freelancer Profiles"
                 ],
-                "summary": "Eliminar un perfil de freelancer",
-                "description": "Aplica un Soft Delete al perfil especificado",
-                "operationId": "1fd7c17f5ba1ada78a92f506b8a241e5",
+                "summary": "Eliminar perfil de freelancer",
+                "description": "Elimina el perfil especificado.",
+                "operationId": "deleteFreelancerProfile",
                 "parameters": [
                     {
                         "name": "id",
@@ -1198,18 +1603,30 @@
                         "description": "ID del perfil a eliminar",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Perfil eliminado"
+                        "description": "Perfil eliminado correctamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
                     },
                     "404": {
                         "description": "Perfil no encontrado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/roles": {
@@ -1217,7 +1634,8 @@
                 "tags": [
                     "Roles"
                 ],
-                "summary": "Listar roles",
+                "summary": "Listar todos los roles",
+                "description": "Obtiene todos los roles registrados en el sistema.",
                 "operationId": "listRoles",
                 "responses": {
                     "200": {
@@ -1238,13 +1656,43 @@
                     "Roles"
                 ],
                 "summary": "Crear rol",
+                "description": "Crea un nuevo rol. Endpoint protegido para administradores.",
                 "operationId": "createRole",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "moderador"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Rol con permisos limitados de moderación"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
                         "description": "Rol creado exitosamente"
                     },
                     "401": {
                         "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "422": {
+                        "description": "Datos inválidos"
                     }
                 },
                 "security": [
@@ -1259,14 +1707,33 @@
                 "tags": [
                     "Roles"
                 ],
-                "summary": "Obtener rol",
+                "summary": "Obtener rol por ID",
+                "description": "Obtiene la información de un rol específico.",
                 "operationId": "showRole",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del rol",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Rol obtenido exitosamente"
                     },
                     "401": {
                         "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Rol no encontrado"
                     }
                 },
                 "security": [
@@ -1280,13 +1747,58 @@
                     "Roles"
                 ],
                 "summary": "Actualizar rol",
+                "description": "Actualiza la información de un rol existente.",
                 "operationId": "updateRole",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del rol",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "moderador"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Rol actualizado"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "Rol actualizado exitosamente"
                     },
                     "401": {
                         "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Rol no encontrado"
+                    },
+                    "409": {
+                        "description": "No se puede modificar un rol protegido"
+                    },
+                    "422": {
+                        "description": "Datos inválidos"
                     }
                 },
                 "security": [
@@ -1300,13 +1812,35 @@
                     "Roles"
                 ],
                 "summary": "Eliminar rol",
+                "description": "Elimina un rol si no tiene usuarios asignados y no es un rol protegido del sistema.",
                 "operationId": "deleteRole",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del rol",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Rol eliminado exitosamente"
                     },
                     "401": {
                         "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Rol no encontrado"
+                    },
+                    "409": {
+                        "description": "No se puede eliminar el rol"
                     }
                 },
                 "security": [
@@ -1321,35 +1855,43 @@
                 "tags": [
                     "Services"
                 ],
-                "summary": "Obtener lista de servicios",
-                "description": "Retorna una lista de todos los servicios activos con su perfil de freelancer",
-                "operationId": "4c175c5d6594b4a5112bbe15a46e2bb4",
+                "summary": "Listar servicios",
+                "description": "Retorna todos los servicios con su perfil de freelancer, usuario y rol.",
+                "operationId": "listServices",
                 "responses": {
                     "200": {
-                        "description": "Operación exitosa"
+                        "description": "Servicios obtenidos exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "post": {
                 "tags": [
                     "Services"
                 ],
-                "summary": "Crear un nuevo servicio",
-                "description": "Crea un registro de servicio en la base de datos",
-                "operationId": "b05b71c30267faa468172458580fb6fc",
+                "summary": "Crear servicio",
+                "description": "Crea un servicio para un perfil freelancer. Un freelancer crea servicios para su propio perfil; un admin puede indicar freelancer_id.",
+                "operationId": "createService",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "freelancer_id",
                                     "title",
                                     "description",
                                     "category"
                                 ],
                                 "properties": {
                                     "freelancer_id": {
+                                        "description": "Solo requerido si el usuario autenticado es admin",
                                         "type": "integer",
                                         "example": 1
                                     },
@@ -1359,7 +1901,7 @@
                                     },
                                     "description": {
                                         "type": "string",
-                                        "example": "Creación de API RESTful..."
+                                        "example": "Creación de API RESTful con Laravel"
                                     },
                                     "price": {
                                         "type": "number",
@@ -1388,10 +1930,21 @@
                     "201": {
                         "description": "Servicio creado exitosamente"
                     },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
                     "422": {
                         "description": "Error de validación"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/services/{id}": {
@@ -1399,9 +1952,9 @@
                 "tags": [
                     "Services"
                 ],
-                "summary": "Obtener un servicio específico",
-                "description": "Retorna los detalles de un solo servicio buscado por su ID",
-                "operationId": "42775b582b563bc36a9e06ae850100bf",
+                "summary": "Obtener servicio por ID",
+                "description": "Retorna los detalles de un servicio.",
+                "operationId": "showService",
                 "parameters": [
                     {
                         "name": "id",
@@ -1409,34 +1962,44 @@
                         "description": "ID del servicio",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Operación exitosa"
+                        "description": "Servicio obtenido exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
                     },
                     "404": {
                         "description": "Servicio no encontrado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "put": {
                 "tags": [
                     "Services"
                 ],
-                "summary": "Actualizar un servicio",
-                "description": "Actualiza la información de un servicio existente",
-                "operationId": "38f6a6cc2f5cd3dfdf39805e7fa21996",
+                "summary": "Actualizar servicio",
+                "description": "Actualiza la información de un servicio existente.",
+                "operationId": "updateService",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID del servicio a actualizar",
+                        "description": "ID del servicio",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
@@ -1445,19 +2008,14 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "title",
-                                    "description",
-                                    "category"
-                                ],
                                 "properties": {
                                     "title": {
                                         "type": "string",
-                                        "example": "Desarrollo Web (Actualizado)"
+                                        "example": "Desarrollo Web Actualizado"
                                     },
                                     "description": {
                                         "type": "string",
-                                        "example": "Nueva descripción..."
+                                        "example": "Nueva descripción del servicio"
                                     },
                                     "price": {
                                         "type": "number",
@@ -1485,35 +2043,64 @@
                 "responses": {
                     "200": {
                         "description": "Servicio actualizado correctamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Servicio no encontrado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             },
             "delete": {
                 "tags": [
                     "Services"
                 ],
-                "summary": "Eliminar un servicio",
-                "description": "Aplica un Soft Delete al servicio especificado",
-                "operationId": "c189d6ab2d037e8fb4228a535ae6a399",
+                "summary": "Eliminar servicio",
+                "description": "Elimina un servicio existente.",
+                "operationId": "deleteService",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID del servicio a eliminar",
+                        "description": "ID del servicio",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "example": 1
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Servicio eliminado"
+                        "description": "Servicio eliminado correctamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
                     },
                     "404": {
                         "description": "Servicio no encontrado"
                     }
-                }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/users": {
@@ -1521,7 +2108,8 @@
                 "tags": [
                     "Users"
                 ],
-                "summary": "Listar usuarios",
+                "summary": "Listar todos los usuarios",
+                "description": "Obtiene todos los usuarios registrados con su rol principal.",
                 "operationId": "listUsers",
                 "responses": {
                     "200": {
@@ -1529,6 +2117,9 @@
                     },
                     "401": {
                         "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
                     }
                 },
                 "security": [
@@ -1542,6 +2133,7 @@
                     "Users"
                 ],
                 "summary": "Crear usuario",
+                "description": "Crea un usuario y le asigna un solo rol principal. El rol admin no se asigna desde este endpoint.",
                 "operationId": "createUser",
                 "requestBody": {
                     "required": true,
@@ -1549,18 +2141,19 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "nombre",
-                                    "apellido",
+                                    "name",
+                                    "last_name",
                                     "email",
                                     "password",
-                                    "tipo_cuenta"
+                                    "password_confirmation",
+                                    "role"
                                 ],
                                 "properties": {
-                                    "nombre": {
+                                    "name": {
                                         "type": "string",
                                         "example": "Juan"
                                     },
-                                    "apellido": {
+                                    "last_name": {
                                         "type": "string",
                                         "example": "Pérez"
                                     },
@@ -1577,21 +2170,27 @@
                                         "type": "string",
                                         "example": "password123"
                                     },
-                                    "tipo_cuenta": {
+                                    "role": {
                                         "type": "string",
                                         "enum": [
-                                            "Cliente",
-                                            "Freelancer",
-                                            "Empresa"
-                                        ]
+                                            "cliente",
+                                            "freelancer",
+                                            "empresa"
+                                        ],
+                                        "example": "cliente"
                                     },
-                                    "telefono": {
+                                    "phone": {
                                         "type": "string",
-                                        "example": "123456789"
+                                        "example": "7712233445"
                                     },
-                                    "foto_perfil": {
+                                    "profile_photo": {
                                         "type": "string",
+                                        "example": "https://example.com/photo.jpg",
                                         "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
                                     }
                                 },
                                 "type": "object"
@@ -1605,6 +2204,9 @@
                     },
                     "401": {
                         "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
                     },
                     "422": {
                         "description": "Datos inválidos"
@@ -1622,14 +2224,29 @@
                 "tags": [
                     "Users"
                 ],
-                "summary": "Obtener usuario",
+                "summary": "Obtener usuario por ID",
                 "operationId": "showUser",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del usuario",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Usuario obtenido exitosamente"
                     },
                     "401": {
                         "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "404": {
+                        "description": "Usuario no encontrado"
                     }
                 },
                 "security": [
@@ -1644,12 +2261,85 @@
                 ],
                 "summary": "Actualizar usuario",
                 "operationId": "updateUser",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del usuario",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Juan"
+                                    },
+                                    "last_name": {
+                                        "type": "string",
+                                        "example": "Pérez"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "juan@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    },
+                                    "role": {
+                                        "type": "string",
+                                        "enum": [
+                                            "cliente",
+                                            "freelancer",
+                                            "empresa"
+                                        ],
+                                        "example": "empresa"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "7712233445"
+                                    },
+                                    "profile_photo": {
+                                        "type": "string",
+                                        "example": "https://example.com/photo.jpg",
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "Usuario actualizado exitosamente"
                     },
                     "401": {
                         "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "404": {
+                        "description": "Usuario no encontrado"
+                    },
+                    "422": {
+                        "description": "Datos inválidos"
                     }
                 },
                 "security": [
@@ -1664,12 +2354,30 @@
                 ],
                 "summary": "Eliminar usuario",
                 "operationId": "deleteUser",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del usuario",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Usuario eliminado exitosamente"
                     },
                     "401": {
                         "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "404": {
+                        "description": "Usuario no encontrado"
+                    },
+                    "410": {
+                        "description": "Usuario ya eliminado"
                     }
                 },
                 "security": [
@@ -1695,6 +2403,10 @@
             "description": "Endpoints para visualizar activity logs"
         },
         {
+            "name": "Chatbot IA",
+            "description": "Endpoints para el asistente inteligente de WorkLink"
+        },
+        {
             "name": "Auth",
             "description": "Autenticación y manejo de sesión"
         },
@@ -1708,15 +2420,15 @@
         },
         {
             "name": "Availabilities",
-            "description": "Endpoints para la gestión de la Disponibilidad Horaria de los Freelancers"
+            "description": "Endpoints para la gestión de la disponibilidad horaria de freelancers"
         },
         {
             "name": "Briefcases",
-            "description": "Endpoints para la gestión del Portafolio (Briefcases) de los Freelancers"
+            "description": "Endpoints para la gestión del portafolio de freelancers"
         },
         {
             "name": "Contracts",
-            "description": "Endpoints para la gestión de Contrataciones formalizadas"
+            "description": "Endpoints para la gestión de contrataciones formalizadas"
         },
         {
             "name": "Contract Requests",
@@ -1724,11 +2436,11 @@
         },
         {
             "name": "Freelancer Profiles",
-            "description": "Endpoints para la gestión de los Perfiles de Freelancers"
+            "description": "Endpoints para la gestión de los perfiles de freelancers"
         },
         {
             "name": "Services",
-            "description": "Endpoints para la gestión de Servicios de los Freelancers"
+            "description": "Endpoints para la gestión de servicios de freelancers"
         }
     ]
 }

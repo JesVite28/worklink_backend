@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Role;
-use App\Http\Requests\StoreUserRequest;
-use App\Http\Requests\UpdateUserRequest;
 use App\Services\ActivityLoggerService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 /**
  * @OA\Tag(
@@ -19,33 +19,28 @@ use Illuminate\Support\Facades\Hash;
 class UserController extends Controller
 {
     /**
-     * Transforma los roles del usuario al formato deseado.
+     * Formatea la respuesta del usuario con un solo rol principal.
      */
-    private function transformRoles(User $user): array
+    private function formatUserResponse(User $user): array
     {
-        return $user->roles->map(function ($role) {
-            return [
+        $role = $user->roles->first();
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'last_name' => $user->last_name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'profile_photo' => $user->profile_photo,
+            'is_active' => $user->is_active,
+            'role' => $role ? [
                 'id' => $role->id,
-                'nombre' => $role->nombre,
-                'descripcion' => $role->descripcion,
-            ];
-        })->values()->all();
-    }
-
-    /**
-     * Obtiene los roles según el tipo de cuenta.
-     */
-    private function getDefaultRoles(string $tipoCuenta): array
-    {
-        $roles = [Role::where('nombre', 'user')->first()?->id];
-
-        if ($tipoCuenta === 'Freelancer') {
-            $roles[] = Role::where('nombre', 'freelancer')->first()?->id;
-        } elseif ($tipoCuenta === 'Empresa') {
-            $roles[] = Role::where('nombre', 'empresa')->first()?->id;
-        }
-
-        return array_filter($roles);
+                'name' => $role->name,
+                'description' => $role->description,
+            ] : null,
+            'created_at' => $user->created_at,
+            'updated_at' => $user->updated_at,
+        ];
     }
 
     /**
@@ -53,69 +48,80 @@ class UserController extends Controller
      *     path="/api/users",
      *     operationId="createUser",
      *     summary="Crear usuario",
+     *     description="Crea un usuario y le asigna un solo rol principal. El rol admin no se asigna desde este endpoint.",
      *     tags={"Users"},
      *     security={{"bearerAuth":{}}},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"nombre","apellido","email","password","tipo_cuenta"},
-     *             @OA\Property(property="nombre", type="string", example="Juan"),
-     *             @OA\Property(property="apellido", type="string", example="Pérez"),
+     *             required={"name","last_name","email","password","password_confirmation","role"},
+     *             @OA\Property(property="name", type="string", example="Juan"),
+     *             @OA\Property(property="last_name", type="string", example="Pérez"),
      *             @OA\Property(property="email", type="string", format="email", example="juan@example.com"),
      *             @OA\Property(property="password", type="string", example="password123"),
      *             @OA\Property(property="password_confirmation", type="string", example="password123"),
-     *             @OA\Property(property="tipo_cuenta", type="string", enum={"Cliente","Freelancer","Empresa"}),
-     *             @OA\Property(property="telefono", type="string", example="123456789"),
-     *             @OA\Property(property="foto_perfil", type="string", nullable=true)
+     *             @OA\Property(property="role", type="string", enum={"cliente","freelancer","empresa"}, example="cliente"),
+     *             @OA\Property(property="phone", type="string", example="7712233445"),
+     *             @OA\Property(property="profile_photo", type="string", nullable=true, example="https://example.com/photo.jpg"),
+     *             @OA\Property(property="is_active", type="boolean", example=true)
      *         )
      *     ),
      *     @OA\Response(response=201, description="Usuario creado exitosamente"),
      *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido"),
+     *     @OA\Response(response=403, description="Sin permisos"),
      *     @OA\Response(response=422, description="Datos inválidos")
      * )
      */
-    public function store(StoreUserRequest $request)
+    public function store(Request $request)
     {
-        $validated = $request->validated();
-
-        $user = User::create([
-            'nombre' => $validated['nombre'],
-            'apellido' => $validated['apellido'],
-            'email' => $validated['email'],
-            'password_hash' => Hash::make($validated['password']),
-            'tipo_cuenta' => $validated['tipo_cuenta'],
-            'telefono' => $validated['telefono'] ?? null,
-            'foto_perfil' => $validated['foto_perfil'] ?? null,
-            'activo' => $validated['activo'] ?? true,
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'email' => 'required|email|max:150|unique:users,email',
+            'password' => 'required|string|min:8|confirmed',
+            'role' => 'required|string|in:cliente,freelancer,empresa',
+            'phone' => 'nullable|string|max:20',
+            'profile_photo' => 'nullable|string|max:255',
+            'is_active' => 'nullable|boolean',
         ]);
 
-        // Asignar roles por defecto según tipo de cuenta
-        $defaultRoles = $this->getDefaultRoles($validated['tipo_cuenta']);
-        if (!empty($defaultRoles)) {
-            $user->roles()->attach($defaultRoles);
-        }
+        $user = DB::transaction(function () use ($validated) {
+            $role = Role::where('name', $validated['role'])->firstOrFail();
 
-        $user->load('roles');
+            $user = User::create([
+                'name' => $validated['name'],
+                'last_name' => $validated['last_name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'phone' => $validated['phone'] ?? null,
+                'profile_photo' => $validated['profile_photo'] ?? null,
+                'is_active' => $validated['is_active'] ?? true,
+            ]);
 
-        // Registrar actividad
-        ActivityLoggerService::logCreate(
-            modulo: 'USUARIOS',
-            entidad: 'users',
-            entidadId: $user->id,
-            descripcion: "Usuario {$user->nombre} {$user->apellido} ({$validated['tipo_cuenta']}) creado"
-        );
+            $user->roles()->sync([
+                $role->id => [
+                    'assigned_at' => now(),
+                ],
+            ]);
+
+            ActivityLoggerService::logCreate(
+                module: 'USERS',
+                entity: 'users',
+                entityId: $user->id,
+                description: "User {$user->name} {$user->last_name} created with role {$role->name}"
+            );
+
+            $user->load('roles');
+
+            return $user;
+        });
 
         return response()->json([
             'success' => true,
             'message' => 'Usuario creado exitosamente',
             'data' => [
-                'id' => $user->id,
-                'nombre' => $user->nombre,
-                'apellido' => $user->apellido,
-                'email' => $user->email,
-                'tipo_cuenta' => $user->tipo_cuenta,
-                'roles' => $this->transformRoles($user),
-            ]
+                'user' => $this->formatUserResponse($user),
+            ],
         ], 201);
     }
 
@@ -123,7 +129,8 @@ class UserController extends Controller
      * @OA\Get(
      *     path="/api/users",
      *     operationId="listUsers",
-     *     summary="Listar usuarios",
+     *     summary="Listar todos los usuarios",
+     *     description="Obtiene todos los usuarios registrados con su rol principal.",
      *     tags={"Users"},
      *     security={{"bearerAuth":{}}},
      *     @OA\Response(
@@ -133,50 +140,29 @@ class UserController extends Controller
      *     @OA\Response(
      *         response=401,
      *         description="No autorizado. Token requerido o inválido"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Sin permisos"
      *     )
      * )
      */
-    public function index(Request $request)
+    public function index()
     {
-        $query = User::with('roles');
-
-        // Filtros opcionales
-        if ($request->has('tipo_cuenta')) {
-            $query->where('tipo_cuenta', $request->tipo_cuenta);
-        }
-
-        if ($request->has('activo')) {
-            $query->where('activo', (bool) $request->activo);
-        }
-
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('nombre', 'like', "%{$search}%")
-                  ->orWhere('apellido', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            });
-        }
-
-        $users = $query->paginate($request->get('per_page', 15))->map(function ($user) {
-            return [
-                'id' => $user->id,
-                'nombre' => $user->nombre,
-                'apellido' => $user->apellido,
-                'email' => $user->email,
-                'tipo_cuenta' => $user->tipo_cuenta,
-                'telefono' => $user->telefono,
-                'foto_perfil' => $user->foto_perfil,
-                'activo' => $user->activo,
-                'creado_en' => $user->creado_en,
-                'roles' => $this->transformRoles($user),
-            ];
-        });
+        $users = User::with('roles')
+            ->latest('created_at')
+            ->get()
+            ->map(function ($user) {
+                return $this->formatUserResponse($user);
+            })
+            ->values();
 
         return response()->json([
             'success' => true,
-            'message' => 'Usuarios obtenidos',
-            'data' => $users,
+            'message' => 'Usuarios obtenidos exitosamente',
+            'data' => [
+                'users' => $users,
+            ],
         ]);
     }
 
@@ -184,24 +170,26 @@ class UserController extends Controller
      * @OA\Get(
      *     path="/api/users/{id}",
      *     operationId="showUser",
-     *     summary="Obtener usuario",
+     *     summary="Obtener usuario por ID",
      *     tags={"Users"},
      *     security={{"bearerAuth":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="Usuario obtenido exitosamente"
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID del usuario",
+     *         @OA\Schema(type="integer", example=1)
      *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="No autorizado. Token requerido o inválido"
-     *     )
+     *     @OA\Response(response=200, description="Usuario obtenido exitosamente"),
+     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido"),
+     *     @OA\Response(response=404, description="Usuario no encontrado")
      * )
      */
-    public function show($id)
+    public function show(int $id)
     {
-        $user = User::with('roles', 'activityLogs')->find($id);
+        $user = User::with('roles')->find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Usuario no encontrado',
@@ -210,19 +198,10 @@ class UserController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Usuario obtenido',
+            'message' => 'Usuario obtenido exitosamente',
             'data' => [
-                'id' => $user->id,
-                'nombre' => $user->nombre,
-                'apellido' => $user->apellido,
-                'email' => $user->email,
-                'tipo_cuenta' => $user->tipo_cuenta,
-                'telefono' => $user->telefono,
-                'foto_perfil' => $user->foto_perfil,
-                'activo' => $user->activo,
-                'creado_en' => $user->creado_en,
-                'roles' => $this->transformRoles($user),
-            ]
+                'user' => $this->formatUserResponse($user),
+            ],
         ]);
     }
 
@@ -233,57 +212,105 @@ class UserController extends Controller
      *     summary="Actualizar usuario",
      *     tags={"Users"},
      *     security={{"bearerAuth":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="Usuario actualizado exitosamente"
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID del usuario",
+     *         @OA\Schema(type="integer", example=1)
      *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="No autorizado. Token requerido o inválido"
-     *     )
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="name", type="string", example="Juan"),
+     *             @OA\Property(property="last_name", type="string", example="Pérez"),
+     *             @OA\Property(property="email", type="string", format="email", example="juan@example.com"),
+     *             @OA\Property(property="password", type="string", example="password123"),
+     *             @OA\Property(property="password_confirmation", type="string", example="password123"),
+     *             @OA\Property(property="role", type="string", enum={"cliente","freelancer","empresa"}, example="empresa"),
+     *             @OA\Property(property="phone", type="string", example="7712233445"),
+     *             @OA\Property(property="profile_photo", type="string", nullable=true, example="https://example.com/photo.jpg"),
+     *             @OA\Property(property="is_active", type="boolean", example=true)
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Usuario actualizado exitosamente"),
+     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido"),
+     *     @OA\Response(response=404, description="Usuario no encontrado"),
+     *     @OA\Response(response=422, description="Datos inválidos")
      * )
      */
-    public function update(UpdateUserRequest $request, $id)
+    public function update(Request $request, int $id)
     {
-        $user = User::find($id);
+        $user = User::with('roles')->find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Usuario no encontrado',
             ], 404);
         }
 
-        $validated = $request->validated();
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:100',
+            'last_name' => 'sometimes|required|string|max:100',
+            'email' => [
+                'sometimes',
+                'required',
+                'email',
+                'max:150',
+                Rule::unique('users', 'email')->ignore($user->id),
+            ],
+            'password' => 'nullable|string|min:8|confirmed',
+            'role' => 'nullable|string|in:cliente,freelancer,empresa',
+            'phone' => 'nullable|string|max:20',
+            'profile_photo' => 'nullable|string|max:255',
+            'is_active' => 'nullable|boolean',
+        ]);
 
-        // Actualizar contraseña si se proporciona
-        if (isset($validated['password'])) {
-            $validated['password_hash'] = Hash::make($validated['password']);
-            unset($validated['password']);
-        }
+        DB::transaction(function () use ($user, $validated) {
+            $data = [];
 
-        $user->update($validated);
+            foreach (['name', 'last_name', 'email', 'phone', 'profile_photo', 'is_active'] as $field) {
+                if (array_key_exists($field, $validated)) {
+                    $data[$field] = $validated[$field];
+                }
+            }
+
+            if (! empty($validated['password'])) {
+                $data['password'] = Hash::make($validated['password']);
+            }
+
+            if (! empty($data)) {
+                $user->update($data);
+            }
+
+            if (! empty($validated['role'])) {
+                $role = Role::where('name', $validated['role'])->firstOrFail();
+
+                $user->roles()->sync([
+                    $role->id => [
+                        'assigned_at' => now(),
+                    ],
+                ]);
+            }
+
+            ActivityLoggerService::logUpdate(
+                module: 'USERS',
+                entity: 'users',
+                entityId: $user->id,
+                description: "User {$user->name} {$user->last_name} updated"
+            );
+        });
+
+        $user->refresh();
         $user->load('roles');
-
-        // Registrar actividad
-        ActivityLoggerService::logUpdate(
-            modulo: 'USUARIOS',
-            entidad: 'users',
-            entidadId: $user->id,
-            descripcion: "Usuario {$user->nombre} {$user->apellido} actualizado"
-        );
 
         return response()->json([
             'success' => true,
             'message' => 'Usuario actualizado exitosamente',
             'data' => [
-                'id' => $user->id,
-                'nombre' => $user->nombre,
-                'apellido' => $user->apellido,
-                'email' => $user->email,
-                'tipo_cuenta' => $user->tipo_cuenta,
-                'roles' => $this->transformRoles($user),
-            ]
+                'user' => $this->formatUserResponse($user),
+            ],
         ]);
     }
 
@@ -294,21 +321,24 @@ class UserController extends Controller
      *     summary="Eliminar usuario",
      *     tags={"Users"},
      *     security={{"bearerAuth":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="Usuario eliminado exitosamente"
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID del usuario",
+     *         @OA\Schema(type="integer", example=1)
      *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="No autorizado. Token requerido o inválido"
-     *     )
+     *     @OA\Response(response=200, description="Usuario eliminado exitosamente"),
+     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido"),
+     *     @OA\Response(response=404, description="Usuario no encontrado"),
+     *     @OA\Response(response=410, description="Usuario ya eliminado")
      * )
      */
-    public function destroy($id)
+    public function destroy(int $id)
     {
         $user = User::withTrashed()->find($id);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Usuario no encontrado',
@@ -322,12 +352,11 @@ class UserController extends Controller
             ], 410);
         }
 
-        // Registrar actividad antes de eliminar
         ActivityLoggerService::logDelete(
-            modulo: 'USUARIOS',
-            entidad: 'users',
-            entidadId: $user->id,
-            descripcion: "Usuario {$user->nombre} {$user->apellido} eliminado"
+            module: 'USERS',
+            entity: 'users',
+            entityId: $user->id,
+            description: "User {$user->name} {$user->last_name} deleted"
         );
 
         $user->delete();

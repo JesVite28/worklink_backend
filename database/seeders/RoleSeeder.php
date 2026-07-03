@@ -12,18 +12,35 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
-        // Crear roles iniciales del sistema
+        /*
+         * Si anteriormente existía el rol "user",
+         * lo eliminamos para evitar que se siga asignando.
+         */
+        Role::where('name', 'user')->delete();
+
         $rolesData = [
-            ['nombre' => 'user', 'descripcion' => 'Usuario estándar del sistema'],
-            ['nombre' => 'admin', 'descripcion' => 'Administrador con acceso total'],
-            ['nombre' => 'empresa', 'descripcion' => 'Cuenta empresarial'],
-            ['nombre' => 'freelancer', 'descripcion' => 'Cuenta freelancer'],
+            [
+                'name' => 'cliente',
+                'description' => 'Cuenta cliente para solicitar servicios y contratar freelancers',
+            ],
+            [
+                'name' => 'freelancer',
+                'description' => 'Cuenta freelancer para publicar servicios y postularse a vacantes',
+            ],
+            [
+                'name' => 'empresa',
+                'description' => 'Cuenta empresarial para publicar vacantes y contratar talento',
+            ],
+            [
+                'name' => 'admin',
+                'description' => 'Administrador con acceso total al sistema',
+            ],
         ];
 
         foreach ($rolesData as $roleData) {
-            Role::firstOrCreate(
-                ['nombre' => $roleData['nombre']],
-                ['descripcion' => $roleData['descripcion']]
+            Role::updateOrCreate(
+                ['name' => $roleData['name']],
+                ['description' => $roleData['description']]
             );
         }
     }

@@ -22,10 +22,18 @@ class Contract extends Model
     ];
 
     protected $casts = [
-        'start_date'   => 'date',
-        'end_date'     => 'date',
+        'request_id' => 'integer',
+        'start_date' => 'date',
+        'end_date' => 'date',
         'total_amount' => 'decimal:2',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
+
+    /**
+     * Contract request that originated this contract.
+     */
     public function contractRequest(): BelongsTo
     {
         return $this->belongsTo(ContractRequest::class, 'request_id');
