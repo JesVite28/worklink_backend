@@ -16,6 +16,23 @@ use Illuminate\Validation\Rule;
  */
 class FreelancerProfileController extends Controller
 {
+    private const WORK_MODES = [
+        'remote',
+        'on_site',
+        'hybrid',
+        'home_service',
+    ];
+
+    private const RATE_TYPES = [
+        'hourly',
+        'daily',
+        'project',
+        'negotiable',
+    ];
+
+    /**
+     * Formatea la información del rol.
+     */
     private function formatRoleResponse($role): ?array
     {
         if (! $role) {
@@ -29,6 +46,9 @@ class FreelancerProfileController extends Controller
         ];
     }
 
+    /**
+     * Formatea la información básica del usuario.
+     */
     private function formatUserResponse(User $user): array
     {
         $user->loadMissing('roles');
@@ -37,6 +57,7 @@ class FreelancerProfileController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'last_name' => $user->last_name,
+            'maternal_last_name' => $user->maternal_last_name,
             'email' => $user->email,
             'phone' => $user->phone,
             'profile_photo' => $user->profile_photo,
@@ -45,6 +66,9 @@ class FreelancerProfileController extends Controller
         ];
     }
 
+    /**
+     * Formatea la información completa del perfil.
+     */
     private function formatProfileResponse(FreelancerProfile $profile): array
     {
         $profile->loadMissing('user.roles');
@@ -52,13 +76,35 @@ class FreelancerProfileController extends Controller
         $data = [
             'id' => $profile->id,
             'user_id' => $profile->user_id,
-            'user' => $profile->user ? $this->formatUserResponse($profile->user) : null,
+
+            'user' => $profile->user
+                ? $this->formatUserResponse($profile->user)
+                : null,
+
             'description' => $profile->description,
             'specialty' => $profile->specialty,
-            'hourly_rate' => $profile->hourly_rate,
             'location' => $profile->location,
+            'service_area' => $profile->service_area,
+            'work_mode' => $profile->work_mode,
+            'experience' => $profile->experience,
+
+            'rate_type' => $profile->rate_type,
+            'rate' => $profile->rate,
+
+            'languages' => $profile->languages ?? [],
+
+            'professional_links' => [
+                'website' => $profile->website,
+                'facebook' => $profile->facebook,
+                'instagram' => $profile->instagram,
+                'linkedin' => $profile->linkedin,
+                'github' => $profile->github,
+                'portfolio_url' => $profile->portfolio_url,
+            ],
+
             'available' => $profile->available,
             'average_rate' => $profile->average_rate,
+
             'created_at' => $profile->created_at,
             'updated_at' => $profile->updated_at,
         ];
@@ -78,6 +124,9 @@ class FreelancerProfileController extends Controller
         return $data;
     }
 
+    /**
+     * Verifica si el usuario autenticado puede administrar el perfil.
+     */
     private function canManageProfile(FreelancerProfile $profile): bool
     {
         $user = auth('api')->user();
@@ -86,7 +135,8 @@ class FreelancerProfileController extends Controller
             return false;
         }
 
-        return $user->hasRole('admin') || $profile->user_id === $user->id;
+        return $user->hasRole('admin')
+            || $profile->user_id === $user->id;
     }
 
     /**
@@ -97,8 +147,14 @@ class FreelancerProfileController extends Controller
      *     summary="Listar perfiles de freelancers",
      *     description="Retorna todos los perfiles de freelancers con su usuario y rol principal.",
      *     security={{"bearerAuth":{}}},
-     *     @OA\Response(response=200, description="Perfiles obtenidos exitosamente"),
-     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido")
+     *     @OA\Response(
+     *         response=200,
+     *         description="Perfiles obtenidos exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado"
+     *     )
      * )
      */
     public function index()
@@ -106,7 +162,9 @@ class FreelancerProfileController extends Controller
         $profiles = FreelancerProfile::with('user.roles')
             ->latest('created_at')
             ->get()
-            ->map(fn($profile) => $this->formatProfileResponse($profile))
+            ->map(
+                fn($profile) => $this->formatProfileResponse($profile)
+            )
             ->values();
 
         return response()->json([
@@ -124,24 +182,154 @@ class FreelancerProfileController extends Controller
      *     operationId="createFreelancerProfile",
      *     tags={"Freelancer Profiles"},
      *     summary="Crear perfil de freelancer",
-     *     description="Crea un perfil de freelancer. Un freelancer crea su propio perfil; un admin puede crear el perfil indicando user_id.",
+     *     description="Crea el perfil profesional de un freelancer.",
      *     security={{"bearerAuth":{}}},
+     *
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             @OA\Property(property="user_id", type="integer", example=3, description="Solo requerido si el usuario autenticado es admin"),
-     *             @OA\Property(property="description", type="string", example="Desarrollador Full Stack con experiencia en Laravel y React"),
-     *             @OA\Property(property="specialty", type="string", example="Desarrollo Web"),
-     *             @OA\Property(property="hourly_rate", type="number", format="float", example=25.50),
-     *             @OA\Property(property="location", type="string", example="Pachuca, Hidalgo"),
-     *             @OA\Property(property="available", type="boolean", example=true),
-     *             @OA\Property(property="average_rate", type="number", format="float", example=5.00)
+     *             required={
+     *                 "description",
+     *                 "specialty",
+     *                 "location",
+     *                 "service_area",
+     *                 "work_mode",
+     *                 "experience",
+     *                 "rate_type"
+     *             },
+     *
+     *             @OA\Property(
+     *                 property="user_id",
+     *                 type="integer",
+     *                 example=3,
+     *                 description="Solo debe enviarlo un administrador"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="description",
+     *                 type="string",
+     *                 example="Desarrollador Full Stack especializado en aplicaciones web"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="specialty",
+     *                 type="string",
+     *                 example="Desarrollo Web"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="location",
+     *                 type="string",
+     *                 example="Pachuca, Hidalgo"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="service_area",
+     *                 type="string",
+     *                 example="Desarrollo de sistemas web y aplicaciones empresariales"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="work_mode",
+     *                 type="string",
+     *                 enum={"remote","on_site","hybrid","home_service"},
+     *                 example="remote"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="experience",
+     *                 type="string",
+     *                 example="Tres años desarrollando aplicaciones con Laravel y React"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="rate_type",
+     *                 type="string",
+     *                 enum={"hourly","daily","project","negotiable"},
+     *                 example="project"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="rate",
+     *                 type="number",
+     *                 format="float",
+     *                 nullable=true,
+     *                 example=8500
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="languages",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Español","Inglés"}
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="website",
+     *                 type="string",
+     *                 nullable=true,
+     *                 example="https://ejemplo.com"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="facebook",
+     *                 type="string",
+     *                 nullable=true,
+     *                 example="https://facebook.com/ejemplo"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="instagram",
+     *                 type="string",
+     *                 nullable=true,
+     *                 example="https://instagram.com/ejemplo"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="linkedin",
+     *                 type="string",
+     *                 nullable=true,
+     *                 example="https://linkedin.com/in/ejemplo"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="github",
+     *                 type="string",
+     *                 nullable=true,
+     *                 example="https://github.com/ejemplo"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="portfolio_url",
+     *                 type="string",
+     *                 nullable=true,
+     *                 example="https://behance.net/ejemplo"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="available",
+     *                 type="boolean",
+     *                 example=true
+     *             )
      *         )
      *     ),
-     *     @OA\Response(response=201, description="Perfil creado exitosamente"),
-     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido"),
-     *     @OA\Response(response=403, description="Sin permisos"),
-     *     @OA\Response(response=422, description="Error de validación")
+     *
+     *     @OA\Response(
+     *         response=201,
+     *         description="Perfil creado exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Sin permisos"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación"
+     *     )
      * )
      */
     public function store(Request $request)
@@ -169,12 +357,105 @@ class FreelancerProfileController extends Controller
                 'exists:users,id',
                 'unique:freelancer_profiles,user_id',
             ],
-            'description' => 'nullable|string',
-            'specialty' => 'nullable|string|max:150',
-            'hourly_rate' => 'nullable|numeric|min:0',
-            'location' => 'nullable|string|max:150',
-            'available' => 'nullable|boolean',
-            'average_rate' => 'nullable|numeric|min:0|max:5',
+
+            'description' => [
+                'required',
+                'string',
+                'max:500',
+            ],
+
+            'specialty' => [
+                'required',
+                'string',
+                'max:150',
+            ],
+
+            'location' => [
+                'required',
+                'string',
+                'max:150',
+            ],
+
+            'service_area' => [
+                'required',
+                'string',
+                'max:150',
+            ],
+
+            'work_mode' => [
+                'required',
+                Rule::in(self::WORK_MODES),
+            ],
+
+            'experience' => [
+                'required',
+                'string',
+                'max:3000',
+            ],
+
+            'rate_type' => [
+                'required',
+                Rule::in(self::RATE_TYPES),
+            ],
+
+            'rate' => [
+                'required_unless:rate_type,negotiable',
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+
+            'languages' => [
+                'nullable',
+                'array',
+                'max:20',
+            ],
+
+            'languages.*' => [
+                'string',
+                'max:80',
+            ],
+
+            'website' => [
+                'nullable',
+                'url',
+                'max:255',
+            ],
+
+            'facebook' => [
+                'nullable',
+                'url',
+                'max:255',
+            ],
+
+            'instagram' => [
+                'nullable',
+                'url',
+                'max:255',
+            ],
+
+            'linkedin' => [
+                'nullable',
+                'url',
+                'max:255',
+            ],
+
+            'github' => [
+                'nullable',
+                'url',
+                'max:255',
+            ],
+
+            'portfolio_url' => [
+                'nullable',
+                'url',
+                'max:255',
+            ],
+
+            'available' => [
+                'nullable',
+                'boolean',
+            ],
         ]);
 
         $userId = $authUser->hasRole('admin')
@@ -197,15 +478,18 @@ class FreelancerProfileController extends Controller
             ], 422);
         }
 
-        $profile = FreelancerProfile::create([
-            'user_id' => $userId,
-            'description' => $validated['description'] ?? null,
-            'specialty' => $validated['specialty'] ?? null,
-            'hourly_rate' => $validated['hourly_rate'] ?? null,
-            'location' => $validated['location'] ?? null,
-            'available' => $validated['available'] ?? true,
-            'average_rate' => $validated['average_rate'] ?? null,
-        ]);
+        if ($validated['rate_type'] === 'negotiable') {
+            $validated['rate'] = null;
+        }
+
+        $validated['user_id'] = $userId;
+        $validated['available'] = $validated['available'] ?? true;
+
+        /*
+         * average_rate no se recibe desde el frontend.
+         * Se calculará posteriormente con base en las calificaciones.
+         */
+        $profile = FreelancerProfile::create($validated);
 
         ActivityLoggerService::logCreate(
             module: 'FREELANCER_PROFILES',
@@ -214,7 +498,10 @@ class FreelancerProfileController extends Controller
             description: "Freelancer profile created for user ID {$userId}"
         );
 
-        $profile->load('user.roles');
+        $profile->load([
+            'user.roles',
+            'briefcases',
+        ]);
 
         return response()->json([
             'success' => true,
@@ -230,9 +517,10 @@ class FreelancerProfileController extends Controller
      *     path="/api/profiles/{id}",
      *     operationId="showFreelancerProfile",
      *     tags={"Freelancer Profiles"},
-     *     summary="Obtener perfil de freelancer por ID",
-     *     description="Retorna los detalles del perfil, incluyendo usuario, rol, servicios, portafolio y disponibilidad.",
+     *     summary="Obtener perfil de freelancer por ID de perfil",
+     *     description="Retorna el perfil, usuario, servicios, portafolio y disponibilidad.",
      *     security={{"bearerAuth":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -240,9 +528,19 @@ class FreelancerProfileController extends Controller
      *         description="ID del perfil del freelancer",
      *         @OA\Schema(type="integer", example=1)
      *     ),
-     *     @OA\Response(response=200, description="Perfil obtenido exitosamente"),
-     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido"),
-     *     @OA\Response(response=404, description="Perfil no encontrado")
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Perfil obtenido exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Perfil no encontrado"
+     *     )
      * )
      */
     public function show(int $id)
@@ -257,7 +555,7 @@ class FreelancerProfileController extends Controller
         if (! $profile) {
             return response()->json([
                 'success' => false,
-                'message' => 'Perfil no encontrado',
+                'message' => 'Perfil no encontrado.',
             ], 404);
         }
 
@@ -276,8 +574,9 @@ class FreelancerProfileController extends Controller
      *     operationId="showFreelancerProfileByUserId",
      *     tags={"Freelancer Profiles"},
      *     summary="Obtener perfil y portafolio por ID de usuario",
-     *     description="Retorna el perfil del freelancer y su portafolio utilizando el ID del usuario.",
+     *     description="Retorna el perfil profesional y portafolio interno del freelancer utilizando el ID del usuario.",
      *     security={{"bearerAuth":{}}},
+     *
      *     @OA\Parameter(
      *         name="userId",
      *         in="path",
@@ -285,6 +584,7 @@ class FreelancerProfileController extends Controller
      *         description="ID del usuario asociado al perfil freelancer",
      *         @OA\Schema(type="integer", example=3)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Perfil y portafolio obtenidos exitosamente"
@@ -330,8 +630,9 @@ class FreelancerProfileController extends Controller
      *     operationId="updateFreelancerProfile",
      *     tags={"Freelancer Profiles"},
      *     summary="Actualizar perfil de freelancer",
-     *     description="Actualiza la información pública del perfil.",
+     *     description="Actualiza la información profesional del perfil.",
      *     security={{"bearerAuth":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -339,22 +640,133 @@ class FreelancerProfileController extends Controller
      *         description="ID del perfil a actualizar",
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             @OA\Property(property="description", type="string", example="Descripción actualizada"),
-     *             @OA\Property(property="specialty", type="string", example="Arquitecto de Software"),
-     *             @OA\Property(property="hourly_rate", type="number", format="float", example=30.00),
-     *             @OA\Property(property="location", type="string", example="Monterrey"),
-     *             @OA\Property(property="available", type="boolean", example=false),
-     *             @OA\Property(property="average_rate", type="number", format="float", example=4.80)
+     *             @OA\Property(
+     *                 property="description",
+     *                 type="string",
+     *                 example="Desarrollador Full Stack actualizado"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="specialty",
+     *                 type="string",
+     *                 example="Arquitectura de software"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="location",
+     *                 type="string",
+     *                 example="Monterrey, Nuevo León"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="service_area",
+     *                 type="string",
+     *                 example="Desarrollo de sistemas empresariales"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="work_mode",
+     *                 type="string",
+     *                 enum={"remote","on_site","hybrid","home_service"},
+     *                 example="hybrid"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="experience",
+     *                 type="string",
+     *                 example="Experiencia en Laravel, React, MySQL y AWS"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="rate_type",
+     *                 type="string",
+     *                 enum={"hourly","daily","project","negotiable"},
+     *                 example="hourly"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="rate",
+     *                 type="number",
+     *                 format="float",
+     *                 nullable=true,
+     *                 example=250
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="languages",
+     *                 type="array",
+     *                 @OA\Items(type="string"),
+     *                 example={"Español","Inglés"}
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="website",
+     *                 type="string",
+     *                 nullable=true
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="facebook",
+     *                 type="string",
+     *                 nullable=true
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="instagram",
+     *                 type="string",
+     *                 nullable=true
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="linkedin",
+     *                 type="string",
+     *                 nullable=true
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="github",
+     *                 type="string",
+     *                 nullable=true
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="portfolio_url",
+     *                 type="string",
+     *                 nullable=true
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="available",
+     *                 type="boolean",
+     *                 example=true
+     *             )
      *         )
      *     ),
-     *     @OA\Response(response=200, description="Perfil actualizado correctamente"),
-     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido"),
-     *     @OA\Response(response=403, description="Sin permisos"),
-     *     @OA\Response(response=404, description="Perfil no encontrado"),
-     *     @OA\Response(response=422, description="Error de validación")
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Perfil actualizado correctamente"
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Sin permisos"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Perfil no encontrado"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación"
+     *     )
      * )
      */
     public function update(Request $request, int $id)
@@ -364,7 +776,7 @@ class FreelancerProfileController extends Controller
         if (! $profile) {
             return response()->json([
                 'success' => false,
-                'message' => 'Perfil no encontrado',
+                'message' => 'Perfil no encontrado.',
             ], 404);
         }
 
@@ -376,13 +788,161 @@ class FreelancerProfileController extends Controller
         }
 
         $validated = $request->validate([
-            'description' => 'nullable|string',
-            'specialty' => 'nullable|string|max:150',
-            'hourly_rate' => 'nullable|numeric|min:0',
-            'location' => 'nullable|string|max:150',
-            'available' => 'nullable|boolean',
-            'average_rate' => 'nullable|numeric|min:0|max:5',
+            'description' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:500',
+            ],
+
+            'specialty' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:150',
+            ],
+
+            'location' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:150',
+            ],
+
+            'service_area' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:150',
+            ],
+
+            'work_mode' => [
+                'sometimes',
+                'required',
+                Rule::in(self::WORK_MODES),
+            ],
+
+            'experience' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:3000',
+            ],
+
+            'rate_type' => [
+                'sometimes',
+                'required',
+                Rule::in(self::RATE_TYPES),
+            ],
+
+            'rate' => [
+                'sometimes',
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+
+            'languages' => [
+                'sometimes',
+                'nullable',
+                'array',
+                'max:20',
+            ],
+
+            'languages.*' => [
+                'string',
+                'max:80',
+            ],
+
+            'website' => [
+                'sometimes',
+                'nullable',
+                'url',
+                'max:255',
+            ],
+
+            'facebook' => [
+                'sometimes',
+                'nullable',
+                'url',
+                'max:255',
+            ],
+
+            'instagram' => [
+                'sometimes',
+                'nullable',
+                'url',
+                'max:255',
+            ],
+
+            'linkedin' => [
+                'sometimes',
+                'nullable',
+                'url',
+                'max:255',
+            ],
+
+            'github' => [
+                'sometimes',
+                'nullable',
+                'url',
+                'max:255',
+            ],
+
+            'portfolio_url' => [
+                'sometimes',
+                'nullable',
+                'url',
+                'max:255',
+            ],
+
+            'available' => [
+                'sometimes',
+                'boolean',
+            ],
         ]);
+
+        /*
+         * Solo valida la combinación de tarifa cuando alguno
+         * de esos dos campos está siendo actualizado.
+         */
+        if (
+            array_key_exists('rate_type', $validated)
+            || array_key_exists('rate', $validated)
+        ) {
+            $rateType = $validated['rate_type']
+                ?? $profile->rate_type;
+
+            $rate = array_key_exists('rate', $validated)
+                ? $validated['rate']
+                : $profile->rate;
+
+            if (! $rateType) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debes indicar el tipo de tarifa.',
+                    'errors' => [
+                        'rate_type' => [
+                            'El campo tipo de tarifa es obligatorio.',
+                        ],
+                    ],
+                ], 422);
+            }
+
+            if ($rateType === 'negotiable') {
+                $validated['rate'] = null;
+            } elseif ($rate === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debes indicar una tarifa cuando el tipo no es negociable.',
+                    'errors' => [
+                        'rate' => [
+                            'El campo tarifa es obligatorio.',
+                        ],
+                    ],
+                ], 422);
+            }
+        }
 
         $profile->update($validated);
 
@@ -394,7 +954,11 @@ class FreelancerProfileController extends Controller
         );
 
         $profile->refresh();
-        $profile->load('user.roles');
+
+        $profile->load([
+            'user.roles',
+            'briefcases',
+        ]);
 
         return response()->json([
             'success' => true,
@@ -413,6 +977,7 @@ class FreelancerProfileController extends Controller
      *     summary="Eliminar perfil de freelancer",
      *     description="Elimina el perfil especificado.",
      *     security={{"bearerAuth":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -420,10 +985,23 @@ class FreelancerProfileController extends Controller
      *         description="ID del perfil a eliminar",
      *         @OA\Schema(type="integer", example=1)
      *     ),
-     *     @OA\Response(response=200, description="Perfil eliminado correctamente"),
-     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido"),
-     *     @OA\Response(response=403, description="Sin permisos"),
-     *     @OA\Response(response=404, description="Perfil no encontrado")
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Perfil eliminado correctamente"
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Sin permisos"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Perfil no encontrado"
+     *     )
      * )
      */
     public function destroy(int $id)
@@ -433,7 +1011,7 @@ class FreelancerProfileController extends Controller
         if (! $profile) {
             return response()->json([
                 'success' => false,
-                'message' => 'Perfil no encontrado',
+                'message' => 'Perfil no encontrado.',
             ], 404);
         }
 
