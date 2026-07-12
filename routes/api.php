@@ -98,16 +98,36 @@ Route::middleware('auth.api')->group(function () {
     });
 
     /*
-    |--------------------------------------------------------------------------
-    | Freelancer Profiles
-    |--------------------------------------------------------------------------
-    */
+|--------------------------------------------------------------------------
+| Freelancer Profiles
+|--------------------------------------------------------------------------
+*/
 
     Route::get('/profiles', [FreelancerProfileController::class, 'index']);
     Route::post('/profiles', [FreelancerProfileController::class, 'store']);
-    Route::get('/profiles/{id}', [FreelancerProfileController::class, 'show']);
-    Route::put('/profiles/{id}', [FreelancerProfileController::class, 'update']);
-    Route::delete('/profiles/{id}', [FreelancerProfileController::class, 'destroy']);
+
+    /*
+| Obtener perfil y portafolio mediante el ID del usuario.
+*/
+    Route::get(
+        '/profiles/user/{userId}',
+        [FreelancerProfileController::class, 'showByUserId']
+    )->whereNumber('userId');
+
+    Route::get(
+        '/profiles/{id}',
+        [FreelancerProfileController::class, 'show']
+    )->whereNumber('id');
+
+    Route::put(
+        '/profiles/{id}',
+        [FreelancerProfileController::class, 'update']
+    )->whereNumber('id');
+
+    Route::delete(
+        '/profiles/{id}',
+        [FreelancerProfileController::class, 'destroy']
+    )->whereNumber('id');
 
     /*
     |--------------------------------------------------------------------------

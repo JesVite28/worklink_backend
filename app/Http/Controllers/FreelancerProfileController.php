@@ -106,7 +106,7 @@ class FreelancerProfileController extends Controller
         $profiles = FreelancerProfile::with('user.roles')
             ->latest('created_at')
             ->get()
-            ->map(fn ($profile) => $this->formatProfileResponse($profile))
+            ->map(fn($profile) => $this->formatProfileResponse($profile))
             ->values();
 
         return response()->json([
@@ -264,6 +264,60 @@ class FreelancerProfileController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Perfil obtenido exitosamente',
+            'data' => [
+                'profile' => $this->formatProfileResponse($profile),
+            ],
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/profiles/user/{userId}",
+     *     operationId="showFreelancerProfileByUserId",
+     *     tags={"Freelancer Profiles"},
+     *     summary="Obtener perfil y portafolio por ID de usuario",
+     *     description="Retorna el perfil del freelancer y su portafolio utilizando el ID del usuario.",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="userId",
+     *         in="path",
+     *         required=true,
+     *         description="ID del usuario asociado al perfil freelancer",
+     *         @OA\Schema(type="integer", example=3)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Perfil y portafolio obtenidos exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Perfil de freelancer no encontrado"
+     *     )
+     * )
+     */
+    public function showByUserId(int $userId)
+    {
+        $profile = FreelancerProfile::with([
+            'user.roles',
+            'briefcases',
+        ])
+            ->where('user_id', $userId)
+            ->first();
+
+        if (! $profile) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró un perfil de freelancer para este usuario.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Perfil y portafolio obtenidos exitosamente',
             'data' => [
                 'profile' => $this->formatProfileResponse($profile),
             ],

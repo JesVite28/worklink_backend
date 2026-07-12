@@ -1693,6 +1693,44 @@
                 ]
             }
         },
+        "/api/profiles/user/{userId}": {
+            "get": {
+                "tags": [
+                    "Freelancer Profiles"
+                ],
+                "summary": "Obtener perfil y portafolio por ID de usuario",
+                "description": "Retorna el perfil del freelancer y su portafolio utilizando el ID del usuario.",
+                "operationId": "showFreelancerProfileByUserId",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "description": "ID del usuario asociado al perfil freelancer",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 3
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Perfil y portafolio obtenidos exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado"
+                    },
+                    "404": {
+                        "description": "Perfil de freelancer no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/roles": {
             "get": {
                 "tags": [
