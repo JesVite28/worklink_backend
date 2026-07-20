@@ -720,20 +720,64 @@
                 ]
             }
         },
+        "/api/public/briefcases": {
+            "get": {
+                "tags": [
+                    "Briefcases"
+                ],
+                "summary": "Listar proyectos públicos de portafolio",
+                "description": "Retorna los proyectos pertenecientes a freelancers activos sin exponer información privada.",
+                "operationId": "publicListBriefcases",
+                "responses": {
+                    "200": {
+                        "description": "Portafolios públicos obtenidos exitosamente"
+                    }
+                }
+            }
+        },
+        "/api/public/briefcases/{id}": {
+            "get": {
+                "tags": [
+                    "Briefcases"
+                ],
+                "summary": "Obtener públicamente un proyecto de portafolio",
+                "operationId": "publicShowBriefcase",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del proyecto de portafolio",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Proyecto público obtenido exitosamente"
+                    },
+                    "404": {
+                        "description": "Proyecto público no encontrado"
+                    }
+                }
+            }
+        },
         "/api/briefcases": {
             "get": {
                 "tags": [
                     "Briefcases"
                 ],
                 "summary": "Listar portafolios",
-                "description": "Retorna todos los proyectos de portafolio con su perfil freelancer, usuario y rol.",
+                "description": "Retorna todos los proyectos de portafolio para usuarios autenticados.",
                 "operationId": "listBriefcases",
                 "responses": {
                     "200": {
                         "description": "Portafolios obtenidos exitosamente"
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "No autorizado"
                     }
                 },
                 "security": [
@@ -747,7 +791,7 @@
                     "Briefcases"
                 ],
                 "summary": "Crear proyecto de portafolio",
-                "description": "Crea un proyecto en el portafolio de un freelancer. Un freelancer crea proyectos para su propio perfil; un admin puede indicar freelancer_id.",
+                "description": "Crea un proyecto para el portafolio de un freelancer.",
                 "operationId": "createBriefcase",
                 "requestBody": {
                     "required": true,
@@ -759,9 +803,10 @@
                                 ],
                                 "properties": {
                                     "freelancer_id": {
-                                        "description": "Solo requerido si el usuario autenticado es admin",
+                                        "description": "Solo debe enviarlo un administrador",
                                         "type": "integer",
-                                        "example": 1
+                                        "example": 1,
+                                        "nullable": true
                                     },
                                     "title": {
                                         "type": "string",
@@ -769,15 +814,18 @@
                                     },
                                     "description": {
                                         "type": "string",
-                                        "example": "Desarrollo completo de una tienda online"
+                                        "example": "Desarrollo completo de una tienda en línea",
+                                        "nullable": true
                                     },
                                     "image_url": {
                                         "type": "string",
-                                        "example": "https://misitio.com/imagen.jpg"
+                                        "example": "https://misitio.com/imagen.jpg",
+                                        "nullable": true
                                     },
                                     "project_url": {
                                         "type": "string",
-                                        "example": "https://github.com/usuario/repo"
+                                        "example": "https://github.com/usuario/repositorio",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -790,7 +838,7 @@
                         "description": "Proyecto creado exitosamente"
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "No autorizado"
                     },
                     "403": {
                         "description": "Sin permisos"
@@ -812,7 +860,6 @@
                     "Briefcases"
                 ],
                 "summary": "Obtener proyecto de portafolio por ID",
-                "description": "Retorna los detalles de un proyecto de portafolio.",
                 "operationId": "showBriefcase",
                 "parameters": [
                     {
@@ -830,9 +877,6 @@
                     "200": {
                         "description": "Proyecto obtenido exitosamente"
                     },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
-                    },
                     "404": {
                         "description": "Proyecto no encontrado"
                     }
@@ -848,7 +892,6 @@
                     "Briefcases"
                 ],
                 "summary": "Actualizar proyecto de portafolio",
-                "description": "Actualiza la información de un proyecto existente.",
                 "operationId": "updateBriefcase",
                 "parameters": [
                     {
@@ -870,19 +913,22 @@
                                 "properties": {
                                     "title": {
                                         "type": "string",
-                                        "example": "E-commerce en Laravel actualizado"
+                                        "example": "E-commerce actualizado"
                                     },
                                     "description": {
                                         "type": "string",
-                                        "example": "Nueva descripción del proyecto"
+                                        "example": "Nueva descripción del proyecto",
+                                        "nullable": true
                                     },
                                     "image_url": {
                                         "type": "string",
-                                        "example": "https://misitio.com/nueva_imagen.jpg"
+                                        "example": "https://misitio.com/nueva-imagen.jpg",
+                                        "nullable": true
                                     },
                                     "project_url": {
                                         "type": "string",
-                                        "example": "https://github.com/usuario/repo_actualizado"
+                                        "example": "https://github.com/usuario/nuevo-repositorio",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -893,9 +939,6 @@
                 "responses": {
                     "200": {
                         "description": "Proyecto actualizado correctamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
                     },
                     "403": {
                         "description": "Sin permisos"
@@ -918,7 +961,7 @@
                     "Briefcases"
                 ],
                 "summary": "Eliminar proyecto de portafolio",
-                "description": "Elimina un proyecto del portafolio.",
+                "description": "Elimina lógicamente un proyecto de portafolio.",
                 "operationId": "deleteBriefcase",
                 "parameters": [
                     {
@@ -935,9 +978,6 @@
                 "responses": {
                     "200": {
                         "description": "Proyecto eliminado correctamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
                     },
                     "403": {
                         "description": "Sin permisos"
@@ -1443,20 +1483,93 @@
                 ]
             }
         },
+        "/api/public/profiles": {
+            "get": {
+                "tags": [
+                    "Freelancer Profiles"
+                ],
+                "summary": "Listar públicamente perfiles de freelancers",
+                "description": "Retorna perfiles públicos sin información privada.",
+                "operationId": "publicListFreelancerProfiles",
+                "responses": {
+                    "200": {
+                        "description": "Perfiles públicos obtenidos exitosamente"
+                    }
+                }
+            }
+        },
+        "/api/public/profiles/{id}": {
+            "get": {
+                "tags": [
+                    "Freelancer Profiles"
+                ],
+                "summary": "Obtener públicamente un perfil por ID",
+                "operationId": "publicShowFreelancerProfile",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del perfil del freelancer",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Perfil público obtenido exitosamente"
+                    },
+                    "404": {
+                        "description": "Perfil no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/public/profiles/user/{userId}": {
+            "get": {
+                "tags": [
+                    "Freelancer Profiles"
+                ],
+                "summary": "Obtener públicamente un perfil por ID de usuario",
+                "operationId": "publicShowFreelancerProfileByUserId",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "description": "ID del usuario asociado al perfil",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 3
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Perfil público obtenido exitosamente"
+                    },
+                    "404": {
+                        "description": "Perfil no encontrado"
+                    }
+                }
+            }
+        },
         "/api/profiles": {
             "get": {
                 "tags": [
                     "Freelancer Profiles"
                 ],
                 "summary": "Listar perfiles de freelancers",
-                "description": "Retorna todos los perfiles de freelancers con su usuario y rol principal.",
+                "description": "Retorna perfiles con información completa para usuarios autenticados.",
                 "operationId": "listFreelancerProfiles",
                 "responses": {
                     "200": {
                         "description": "Perfiles obtenidos exitosamente"
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "No autorizado"
                     }
                 },
                 "security": [
@@ -1470,44 +1583,111 @@
                     "Freelancer Profiles"
                 ],
                 "summary": "Crear perfil de freelancer",
-                "description": "Crea un perfil de freelancer. Un freelancer crea su propio perfil; un admin puede crear el perfil indicando user_id.",
+                "description": "Crea el perfil profesional de un freelancer.",
                 "operationId": "createFreelancerProfile",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "description",
+                                    "specialty",
+                                    "location",
+                                    "service_area",
+                                    "work_mode",
+                                    "experience",
+                                    "rate_type"
+                                ],
                                 "properties": {
                                     "user_id": {
-                                        "description": "Solo requerido si el usuario autenticado es admin",
                                         "type": "integer",
-                                        "example": 3
+                                        "example": 3,
+                                        "nullable": true
                                     },
                                     "description": {
                                         "type": "string",
-                                        "example": "Desarrollador Full Stack con experiencia en Laravel y React"
+                                        "example": "Desarrollador Full Stack"
                                     },
                                     "specialty": {
                                         "type": "string",
                                         "example": "Desarrollo Web"
                                     },
-                                    "hourly_rate": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": 25.5
-                                    },
                                     "location": {
                                         "type": "string",
                                         "example": "Pachuca, Hidalgo"
                                     },
+                                    "service_area": {
+                                        "type": "string",
+                                        "example": "Desarrollo de sistemas web"
+                                    },
+                                    "work_mode": {
+                                        "type": "string",
+                                        "enum": [
+                                            "remote",
+                                            "on_site",
+                                            "hybrid",
+                                            "home_service"
+                                        ],
+                                        "example": "remote"
+                                    },
+                                    "experience": {
+                                        "type": "string",
+                                        "example": "Tres años de experiencia"
+                                    },
+                                    "rate_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "hourly",
+                                            "daily",
+                                            "project",
+                                            "negotiable"
+                                        ],
+                                        "example": "project"
+                                    },
+                                    "rate": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 8500,
+                                        "nullable": true
+                                    },
+                                    "languages": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "Español",
+                                            "Inglés"
+                                        ]
+                                    },
+                                    "website": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "facebook": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "instagram": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "linkedin": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "github": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "portfolio_url": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
                                     "available": {
                                         "type": "boolean",
                                         "example": true
-                                    },
-                                    "average_rate": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": 5
                                     }
                                 },
                                 "type": "object"
@@ -1518,9 +1698,6 @@
                 "responses": {
                     "201": {
                         "description": "Perfil creado exitosamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
                     },
                     "403": {
                         "description": "Sin permisos"
@@ -1542,13 +1719,11 @@
                     "Freelancer Profiles"
                 ],
                 "summary": "Obtener perfil de freelancer por ID",
-                "description": "Retorna los detalles del perfil, incluyendo usuario, rol, servicios, portafolio y disponibilidad.",
                 "operationId": "showFreelancerProfile",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID del perfil del freelancer",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -1559,9 +1734,6 @@
                 "responses": {
                     "200": {
                         "description": "Perfil obtenido exitosamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
                     },
                     "404": {
                         "description": "Perfil no encontrado"
@@ -1578,13 +1750,11 @@
                     "Freelancer Profiles"
                 ],
                 "summary": "Actualizar perfil de freelancer",
-                "description": "Actualiza la información pública del perfil.",
                 "operationId": "updateFreelancerProfile",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID del perfil a actualizar",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -1592,50 +1762,9 @@
                         }
                     }
                 ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "description": {
-                                        "type": "string",
-                                        "example": "Descripción actualizada"
-                                    },
-                                    "specialty": {
-                                        "type": "string",
-                                        "example": "Arquitecto de Software"
-                                    },
-                                    "hourly_rate": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": 30
-                                    },
-                                    "location": {
-                                        "type": "string",
-                                        "example": "Monterrey"
-                                    },
-                                    "available": {
-                                        "type": "boolean",
-                                        "example": false
-                                    },
-                                    "average_rate": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": 4.8
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
                 "responses": {
                     "200": {
                         "description": "Perfil actualizado correctamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
                     },
                     "403": {
                         "description": "Sin permisos"
@@ -1658,13 +1787,11 @@
                     "Freelancer Profiles"
                 ],
                 "summary": "Eliminar perfil de freelancer",
-                "description": "Elimina el perfil especificado.",
                 "operationId": "deleteFreelancerProfile",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID del perfil a eliminar",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -1675,9 +1802,6 @@
                 "responses": {
                     "200": {
                         "description": "Perfil eliminado correctamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
                     },
                     "403": {
                         "description": "Sin permisos"
@@ -1698,14 +1822,12 @@
                 "tags": [
                     "Freelancer Profiles"
                 ],
-                "summary": "Obtener perfil y portafolio por ID de usuario",
-                "description": "Retorna el perfil del freelancer y su portafolio utilizando el ID del usuario.",
+                "summary": "Obtener perfil por ID de usuario",
                 "operationId": "showFreelancerProfileByUserId",
                 "parameters": [
                     {
                         "name": "userId",
                         "in": "path",
-                        "description": "ID del usuario asociado al perfil freelancer",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -1715,13 +1837,10 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Perfil y portafolio obtenidos exitosamente"
-                    },
-                    "401": {
-                        "description": "No autorizado"
+                        "description": "Perfil obtenido exitosamente"
                     },
                     "404": {
-                        "description": "Perfil de freelancer no encontrado"
+                        "description": "Perfil no encontrado"
                     }
                 },
                 "security": [
@@ -1952,20 +2071,64 @@
                 ]
             }
         },
+        "/api/public/services": {
+            "get": {
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Listar servicios públicos",
+                "description": "Retorna servicios activos pertenecientes a freelancers activos.",
+                "operationId": "publicListServices",
+                "responses": {
+                    "200": {
+                        "description": "Servicios públicos obtenidos exitosamente"
+                    }
+                }
+            }
+        },
+        "/api/public/services/{id}": {
+            "get": {
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Obtener un servicio público por ID",
+                "operationId": "publicShowService",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del servicio",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Servicio público obtenido exitosamente"
+                    },
+                    "404": {
+                        "description": "Servicio público no encontrado"
+                    }
+                }
+            }
+        },
         "/api/services": {
             "get": {
                 "tags": [
                     "Services"
                 ],
                 "summary": "Listar servicios",
-                "description": "Retorna todos los servicios con su perfil de freelancer, usuario y rol.",
+                "description": "Retorna todos los servicios para usuarios autenticados.",
                 "operationId": "listServices",
                 "responses": {
                     "200": {
                         "description": "Servicios obtenidos exitosamente"
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "No autorizado"
                     }
                 },
                 "security": [
@@ -1979,7 +2142,7 @@
                     "Services"
                 ],
                 "summary": "Crear servicio",
-                "description": "Crea un servicio para un perfil freelancer. Un freelancer crea servicios para su propio perfil; un admin puede indicar freelancer_id.",
+                "description": "Crea un servicio para un perfil freelancer.",
                 "operationId": "createService",
                 "requestBody": {
                     "required": true,
@@ -1993,9 +2156,10 @@
                                 ],
                                 "properties": {
                                     "freelancer_id": {
-                                        "description": "Solo requerido si el usuario autenticado es admin",
+                                        "description": "Solo debe enviarlo un administrador",
                                         "type": "integer",
-                                        "example": 1
+                                        "example": 1,
+                                        "nullable": true
                                     },
                                     "title": {
                                         "type": "string",
@@ -2003,12 +2167,13 @@
                                     },
                                     "description": {
                                         "type": "string",
-                                        "example": "Creación de API RESTful con Laravel"
+                                        "example": "Creación de sistemas y API REST con Laravel"
                                     },
                                     "price": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 50
+                                        "example": 8500,
+                                        "nullable": true
                                     },
                                     "category": {
                                         "type": "string",
@@ -2016,7 +2181,8 @@
                                     },
                                     "location": {
                                         "type": "string",
-                                        "example": "Remoto"
+                                        "example": "Remoto",
+                                        "nullable": true
                                     },
                                     "is_active": {
                                         "type": "boolean",
@@ -2033,7 +2199,7 @@
                         "description": "Servicio creado exitosamente"
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "No autorizado"
                     },
                     "403": {
                         "description": "Sin permisos"
@@ -2055,7 +2221,6 @@
                     "Services"
                 ],
                 "summary": "Obtener servicio por ID",
-                "description": "Retorna los detalles de un servicio.",
                 "operationId": "showService",
                 "parameters": [
                     {
@@ -2073,9 +2238,6 @@
                     "200": {
                         "description": "Servicio obtenido exitosamente"
                     },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
-                    },
                     "404": {
                         "description": "Servicio no encontrado"
                     }
@@ -2091,7 +2253,6 @@
                     "Services"
                 ],
                 "summary": "Actualizar servicio",
-                "description": "Actualiza la información de un servicio existente.",
                 "operationId": "updateService",
                 "parameters": [
                     {
@@ -2122,7 +2283,8 @@
                                     "price": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 60
+                                        "example": 9000,
+                                        "nullable": true
                                     },
                                     "category": {
                                         "type": "string",
@@ -2130,7 +2292,8 @@
                                     },
                                     "location": {
                                         "type": "string",
-                                        "example": "Remoto"
+                                        "example": "Remoto",
+                                        "nullable": true
                                     },
                                     "is_active": {
                                         "type": "boolean",
@@ -2145,9 +2308,6 @@
                 "responses": {
                     "200": {
                         "description": "Servicio actualizado correctamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
                     },
                     "403": {
                         "description": "Sin permisos"
@@ -2170,7 +2330,7 @@
                     "Services"
                 ],
                 "summary": "Eliminar servicio",
-                "description": "Elimina un servicio existente.",
+                "description": "Elimina lógicamente un servicio existente.",
                 "operationId": "deleteService",
                 "parameters": [
                     {
@@ -2188,14 +2348,139 @@
                     "200": {
                         "description": "Servicio eliminado correctamente"
                     },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
-                    },
                     "403": {
                         "description": "Sin permisos"
                     },
                     "404": {
                         "description": "Servicio no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/users/me": {
+            "put": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Actualizar mi cuenta",
+                "description": "Permite al usuario autenticado actualizar únicamente sus propios datos personales.",
+                "operationId": "updateMyUserAccount",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Adrian"
+                                    },
+                                    "last_name": {
+                                        "type": "string",
+                                        "example": "Vite"
+                                    },
+                                    "maternal_last_name": {
+                                        "type": "string",
+                                        "example": "Espinosa",
+                                        "nullable": true
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "adrian@example.com"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "7711234567",
+                                        "nullable": true
+                                    },
+                                    "profile_photo": {
+                                        "type": "string",
+                                        "example": "https://example.com/profile.jpg",
+                                        "nullable": true
+                                    },
+                                    "current_password": {
+                                        "description": "Obligatoria únicamente para cambiar la contraseña",
+                                        "type": "string",
+                                        "example": "password123",
+                                        "nullable": true
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "newPassword123",
+                                        "nullable": true
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "example": "newPassword123",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cuenta actualizada exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado"
+                    },
+                    "422": {
+                        "description": "Datos inválidos"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Eliminar mi cuenta",
+                "description": "Permite al usuario autenticado eliminar su propia cuenta confirmando su contraseña.",
+                "operationId": "deleteMyUserAccount",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "password"
+                                ],
+                                "properties": {
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cuenta eliminada exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado"
+                    },
+                    "403": {
+                        "description": "Contraseña incorrecta"
+                    },
+                    "422": {
+                        "description": "Datos inválidos"
                     }
                 },
                 "security": [
@@ -2217,9 +2502,6 @@
                     "200": {
                         "description": "Usuarios obtenidos exitosamente"
                     },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
-                    },
                     "403": {
                         "description": "Sin permisos"
                     }
@@ -2235,7 +2517,7 @@
                     "Users"
                 ],
                 "summary": "Crear usuario",
-                "description": "Crea un usuario y le asigna un solo rol principal. El rol admin no se asigna desde este endpoint.",
+                "description": "Crea un usuario y le asigna un rol principal. Uso administrativo.",
                 "operationId": "createUser",
                 "requestBody": {
                     "required": true,
@@ -2288,11 +2570,11 @@
                                     },
                                     "phone": {
                                         "type": "string",
-                                        "example": "7712233445"
+                                        "example": "7712233445",
+                                        "nullable": true
                                     },
                                     "profile_photo": {
                                         "type": "string",
-                                        "example": "https://example.com/photo.jpg",
                                         "nullable": true
                                     },
                                     "is_active": {
@@ -2308,9 +2590,6 @@
                 "responses": {
                     "201": {
                         "description": "Usuario creado exitosamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
                     },
                     "403": {
                         "description": "Sin permisos"
@@ -2349,9 +2628,6 @@
                     "200": {
                         "description": "Usuario obtenido exitosamente"
                     },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
-                    },
                     "404": {
                         "description": "Usuario no encontrado"
                     }
@@ -2366,7 +2642,7 @@
                 "tags": [
                     "Users"
                 ],
-                "summary": "Actualizar usuario",
+                "summary": "Actualizar usuario como administrador",
                 "operationId": "updateUser",
                 "parameters": [
                     {
@@ -2396,21 +2672,19 @@
                                     },
                                     "maternal_last_name": {
                                         "type": "string",
-                                        "example": "López",
                                         "nullable": true
                                     },
                                     "email": {
                                         "type": "string",
-                                        "format": "email",
-                                        "example": "juan@example.com"
+                                        "format": "email"
                                     },
                                     "password": {
                                         "type": "string",
-                                        "example": "password123"
+                                        "nullable": true
                                     },
                                     "password_confirmation": {
                                         "type": "string",
-                                        "example": "password123"
+                                        "nullable": true
                                     },
                                     "role": {
                                         "type": "string",
@@ -2418,21 +2692,18 @@
                                             "cliente",
                                             "freelancer",
                                             "empresa"
-                                        ],
-                                        "example": "empresa"
+                                        ]
                                     },
                                     "phone": {
                                         "type": "string",
-                                        "example": "7712233445"
+                                        "nullable": true
                                     },
                                     "profile_photo": {
                                         "type": "string",
-                                        "example": "https://example.com/photo.jpg",
                                         "nullable": true
                                     },
                                     "is_active": {
-                                        "type": "boolean",
-                                        "example": true
+                                        "type": "boolean"
                                     }
                                 },
                                 "type": "object"
@@ -2443,9 +2714,6 @@
                 "responses": {
                     "200": {
                         "description": "Usuario actualizado exitosamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
                     },
                     "404": {
                         "description": "Usuario no encontrado"
@@ -2464,7 +2732,7 @@
                 "tags": [
                     "Users"
                 ],
-                "summary": "Eliminar usuario",
+                "summary": "Eliminar usuario como administrador",
                 "operationId": "deleteUser",
                 "parameters": [
                     {
@@ -2481,9 +2749,6 @@
                 "responses": {
                     "200": {
                         "description": "Usuario eliminado exitosamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
                     },
                     "404": {
                         "description": "Usuario no encontrado"
@@ -2548,7 +2813,7 @@
         },
         {
             "name": "Freelancer Profiles",
-            "description": "Endpoints para la gestión de los perfiles de freelancers"
+            "description": "Endpoints para la gestión de perfiles de freelancers"
         },
         {
             "name": "Services",

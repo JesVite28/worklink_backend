@@ -23,8 +23,82 @@ use App\Http\Controllers\Api\ChatBotController;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/chatbot/message', [ChatBotController::class, 'sendPublicMessage'])
-    ->middleware('throttle:20,1');
+
+Route::post(
+    '/chatbot/message',
+    [ChatBotController::class, 'sendPublicMessage']
+)->middleware('throttle:20,1');
+
+
+/*
+|--------------------------------------------------------------------------
+| Public Exploration Routes
+|--------------------------------------------------------------------------
+|
+| Estas rutas pueden consultarse sin iniciar sesión.
+| Se utiliza el prefijo /public para mantenerlas separadas
+| de las rutas privadas utilizadas por el dashboard.
+|
+*/
+
+Route::prefix('public')->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Public Freelancer Profiles
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/profiles',
+        [FreelancerProfileController::class, 'publicIndex']
+    );
+
+    Route::get(
+        '/profiles/user/{userId}',
+        [FreelancerProfileController::class, 'publicShowByUserId']
+    )->whereNumber('userId');
+
+    Route::get(
+        '/profiles/{id}',
+        [FreelancerProfileController::class, 'publicShow']
+    )->whereNumber('id');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Public Services
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/services',
+        [ServiceController::class, 'publicIndex']
+    );
+
+    Route::get(
+        '/services/{id}',
+        [ServiceController::class, 'publicShow']
+    )->whereNumber('id');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Public Briefcases / Portfolios
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/briefcases',
+        [BriefcaseController::class, 'publicIndex']
+    );
+
+    Route::get(
+        '/briefcases/{id}',
+        [BriefcaseController::class, 'publicShow']
+    )->whereNumber('id');
+});
+
 
 /*
 |--------------------------------------------------------------------------
@@ -35,9 +109,16 @@ Route::post('/chatbot/message', [ChatBotController::class, 'sendPublicMessage'])
 Route::options('{any}', function () {
     return response('', 200)
         ->header('Access-Control-Allow-Origin', '*')
-        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
-        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+        ->header(
+            'Access-Control-Allow-Methods',
+            'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+        )
+        ->header(
+            'Access-Control-Allow-Headers',
+            'Content-Type, Authorization, X-Requested-With'
+        );
 })->where('any', '.*');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -57,16 +138,54 @@ Route::middleware('auth.api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh', [AuthController::class, 'refresh']);
 
-    Route::post('/chatbot/auth-message', [ChatBotController::class, 'sendAuthMessage'])
-        ->middleware('throttle:30,1');
+    Route::post(
+        '/chatbot/auth-message',
+        [ChatBotController::class, 'sendAuthMessage']
+    )->middleware('throttle:30,1');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | My Account
+    |--------------------------------------------------------------------------
+    |
+    | Cualquier usuario autenticado puede actualizar o eliminar
+    | únicamente su propia cuenta.
+    |
+    */
+
+    Route::put(
+        '/users/me',
+        [UserController::class, 'updateMe']
+    );
+
+    Route::patch(
+        '/users/me',
+        [UserController::class, 'updateMe']
+    );
+
+    Route::delete(
+        '/users/me',
+        [UserController::class, 'destroyMe']
+    );
+
+
     /*
     |--------------------------------------------------------------------------
     | Activity Logs
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/activity-logs', [ActivityLogController::class, 'index']);
-    Route::get('/activity-logs/summary', [ActivityLogController::class, 'summary']);
+    Route::get(
+        '/activity-logs',
+        [ActivityLogController::class, 'index']
+    );
+
+    Route::get(
+        '/activity-logs/summary',
+        [ActivityLogController::class, 'summary']
+    );
+
 
     /*
     |--------------------------------------------------------------------------
@@ -74,41 +193,103 @@ Route::middleware('auth.api')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/roles', [RoleController::class, 'index']);
+    Route::get(
+        '/roles',
+        [RoleController::class, 'index']
+    );
 
     Route::middleware('role:admin')->group(function () {
-        Route::post('/roles', [RoleController::class, 'store']);
-        Route::get('/roles/{id}', [RoleController::class, 'show']);
-        Route::put('/roles/{id}', [RoleController::class, 'update']);
-        Route::delete('/roles/{id}', [RoleController::class, 'destroy']);
+
+        Route::post(
+            '/roles',
+            [RoleController::class, 'store']
+        );
+
+        Route::get(
+            '/roles/{id}',
+            [RoleController::class, 'show']
+        )->whereNumber('id');
+
+        Route::put(
+            '/roles/{id}',
+            [RoleController::class, 'update']
+        )->whereNumber('id');
+
+        Route::patch(
+            '/roles/{id}',
+            [RoleController::class, 'update']
+        )->whereNumber('id');
+
+        Route::delete(
+            '/roles/{id}',
+            [RoleController::class, 'destroy']
+        )->whereNumber('id');
     });
+
 
     /*
     |--------------------------------------------------------------------------
-    | Users
+    | User Administration
+    |--------------------------------------------------------------------------
+    |
+    | Solamente los administradores pueden consultar, crear,
+    | modificar o eliminar cuentas ajenas.
+    |
+    */
+
+    Route::middleware('role:admin')->group(function () {
+
+        Route::get(
+            '/users',
+            [UserController::class, 'index']
+        );
+
+        Route::post(
+            '/users',
+            [UserController::class, 'store']
+        );
+
+        Route::get(
+            '/users/{id}',
+            [UserController::class, 'show']
+        )->whereNumber('id');
+
+        Route::put(
+            '/users/{id}',
+            [UserController::class, 'update']
+        )->whereNumber('id');
+
+        Route::patch(
+            '/users/{id}',
+            [UserController::class, 'update']
+        )->whereNumber('id');
+
+        Route::delete(
+            '/users/{id}',
+            [UserController::class, 'destroy']
+        )->whereNumber('id');
+    });
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Freelancer Profiles
     |--------------------------------------------------------------------------
     */
 
-    Route::middleware('role:admin,empresa')->group(function () {
-        Route::get('/users', [UserController::class, 'index']);
-        Route::post('/users', [UserController::class, 'store']);
-        Route::get('/users/{id}', [UserController::class, 'show']);
-        Route::put('/users/{id}', [UserController::class, 'update']);
-        Route::delete('/users/{id}', [UserController::class, 'destroy']);
-    });
+    Route::get(
+        '/profiles',
+        [FreelancerProfileController::class, 'index']
+    );
+
+    Route::post(
+        '/profiles',
+        [FreelancerProfileController::class, 'store']
+    );
 
     /*
-|--------------------------------------------------------------------------
-| Freelancer Profiles
-|--------------------------------------------------------------------------
-*/
-
-    Route::get('/profiles', [FreelancerProfileController::class, 'index']);
-    Route::post('/profiles', [FreelancerProfileController::class, 'store']);
-
-    /*
-| Obtener perfil y portafolio mediante el ID del usuario.
-*/
+     * Esta ruta debe declararse antes de /profiles/{id}.
+     */
     Route::get(
         '/profiles/user/{userId}',
         [FreelancerProfileController::class, 'showByUserId']
@@ -124,10 +305,16 @@ Route::middleware('auth.api')->group(function () {
         [FreelancerProfileController::class, 'update']
     )->whereNumber('id');
 
+    Route::patch(
+        '/profiles/{id}',
+        [FreelancerProfileController::class, 'update']
+    )->whereNumber('id');
+
     Route::delete(
         '/profiles/{id}',
         [FreelancerProfileController::class, 'destroy']
     )->whereNumber('id');
+
 
     /*
     |--------------------------------------------------------------------------
@@ -135,11 +322,36 @@ Route::middleware('auth.api')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/services', [ServiceController::class, 'index']);
-    Route::post('/services', [ServiceController::class, 'store']);
-    Route::get('/services/{id}', [ServiceController::class, 'show']);
-    Route::put('/services/{id}', [ServiceController::class, 'update']);
-    Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
+    Route::get(
+        '/services',
+        [ServiceController::class, 'index']
+    );
+
+    Route::post(
+        '/services',
+        [ServiceController::class, 'store']
+    );
+
+    Route::get(
+        '/services/{id}',
+        [ServiceController::class, 'show']
+    )->whereNumber('id');
+
+    Route::put(
+        '/services/{id}',
+        [ServiceController::class, 'update']
+    )->whereNumber('id');
+
+    Route::patch(
+        '/services/{id}',
+        [ServiceController::class, 'update']
+    )->whereNumber('id');
+
+    Route::delete(
+        '/services/{id}',
+        [ServiceController::class, 'destroy']
+    )->whereNumber('id');
+
 
     /*
     |--------------------------------------------------------------------------
@@ -147,11 +359,36 @@ Route::middleware('auth.api')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/briefcases', [BriefcaseController::class, 'index']);
-    Route::post('/briefcases', [BriefcaseController::class, 'store']);
-    Route::get('/briefcases/{id}', [BriefcaseController::class, 'show']);
-    Route::put('/briefcases/{id}', [BriefcaseController::class, 'update']);
-    Route::delete('/briefcases/{id}', [BriefcaseController::class, 'destroy']);
+    Route::get(
+        '/briefcases',
+        [BriefcaseController::class, 'index']
+    );
+
+    Route::post(
+        '/briefcases',
+        [BriefcaseController::class, 'store']
+    );
+
+    Route::get(
+        '/briefcases/{id}',
+        [BriefcaseController::class, 'show']
+    )->whereNumber('id');
+
+    Route::put(
+        '/briefcases/{id}',
+        [BriefcaseController::class, 'update']
+    )->whereNumber('id');
+
+    Route::patch(
+        '/briefcases/{id}',
+        [BriefcaseController::class, 'update']
+    )->whereNumber('id');
+
+    Route::delete(
+        '/briefcases/{id}',
+        [BriefcaseController::class, 'destroy']
+    )->whereNumber('id');
+
 
     /*
     |--------------------------------------------------------------------------
@@ -159,11 +396,36 @@ Route::middleware('auth.api')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/availabilities', [AvailabilityController::class, 'index']);
-    Route::post('/availabilities', [AvailabilityController::class, 'store']);
-    Route::get('/availabilities/{id}', [AvailabilityController::class, 'show']);
-    Route::put('/availabilities/{id}', [AvailabilityController::class, 'update']);
-    Route::delete('/availabilities/{id}', [AvailabilityController::class, 'destroy']);
+    Route::get(
+        '/availabilities',
+        [AvailabilityController::class, 'index']
+    );
+
+    Route::post(
+        '/availabilities',
+        [AvailabilityController::class, 'store']
+    );
+
+    Route::get(
+        '/availabilities/{id}',
+        [AvailabilityController::class, 'show']
+    )->whereNumber('id');
+
+    Route::put(
+        '/availabilities/{id}',
+        [AvailabilityController::class, 'update']
+    )->whereNumber('id');
+
+    Route::patch(
+        '/availabilities/{id}',
+        [AvailabilityController::class, 'update']
+    )->whereNumber('id');
+
+    Route::delete(
+        '/availabilities/{id}',
+        [AvailabilityController::class, 'destroy']
+    )->whereNumber('id');
+
 
     /*
     |--------------------------------------------------------------------------
@@ -171,11 +433,36 @@ Route::middleware('auth.api')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/contract-requests', [ContractRequestController::class, 'index']);
-    Route::post('/contract-requests', [ContractRequestController::class, 'store']);
-    Route::get('/contract-requests/{id}', [ContractRequestController::class, 'show']);
-    Route::put('/contract-requests/{id}', [ContractRequestController::class, 'update']);
-    Route::delete('/contract-requests/{id}', [ContractRequestController::class, 'destroy']);
+    Route::get(
+        '/contract-requests',
+        [ContractRequestController::class, 'index']
+    );
+
+    Route::post(
+        '/contract-requests',
+        [ContractRequestController::class, 'store']
+    );
+
+    Route::get(
+        '/contract-requests/{id}',
+        [ContractRequestController::class, 'show']
+    )->whereNumber('id');
+
+    Route::put(
+        '/contract-requests/{id}',
+        [ContractRequestController::class, 'update']
+    )->whereNumber('id');
+
+    Route::patch(
+        '/contract-requests/{id}',
+        [ContractRequestController::class, 'update']
+    )->whereNumber('id');
+
+    Route::delete(
+        '/contract-requests/{id}',
+        [ContractRequestController::class, 'destroy']
+    )->whereNumber('id');
+
 
     /*
     |--------------------------------------------------------------------------
@@ -183,9 +470,33 @@ Route::middleware('auth.api')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/contracts', [ContractController::class, 'index']);
-    Route::post('/contracts', [ContractController::class, 'store']);
-    Route::get('/contracts/{id}', [ContractController::class, 'show']);
-    Route::put('/contracts/{id}', [ContractController::class, 'update']);
-    Route::delete('/contracts/{id}', [ContractController::class, 'destroy']);
+    Route::get(
+        '/contracts',
+        [ContractController::class, 'index']
+    );
+
+    Route::post(
+        '/contracts',
+        [ContractController::class, 'store']
+    );
+
+    Route::get(
+        '/contracts/{id}',
+        [ContractController::class, 'show']
+    )->whereNumber('id');
+
+    Route::put(
+        '/contracts/{id}',
+        [ContractController::class, 'update']
+    )->whereNumber('id');
+
+    Route::patch(
+        '/contracts/{id}',
+        [ContractController::class, 'update']
+    )->whereNumber('id');
+
+    Route::delete(
+        '/contracts/{id}',
+        [ContractController::class, 'destroy']
+    )->whereNumber('id');
 });

@@ -6,12 +6,13 @@ use App\Models\FreelancerProfile;
 use App\Models\User;
 use App\Services\ActivityLoggerService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
  * @OA\Tag(
  *     name="Freelancer Profiles",
- *     description="Endpoints para la gestión de los perfiles de freelancers"
+ *     description="Endpoints para la gestión de perfiles de freelancers"
  * )
  */
 class FreelancerProfileController extends Controller
@@ -31,7 +32,7 @@ class FreelancerProfileController extends Controller
     ];
 
     /**
-     * Formatea la información del rol.
+     * Formatea la información de un rol.
      */
     private function formatRoleResponse($role): ?array
     {
@@ -47,9 +48,11 @@ class FreelancerProfileController extends Controller
     }
 
     /**
-     * Formatea la información básica del usuario.
+     * Formatea la información privada del usuario.
+     *
+     * Se utiliza solamente en endpoints protegidos.
      */
-    private function formatUserResponse(User $user): array
+    private function formatPrivateUserResponse(User $user): array
     {
         $user->loadMissing('roles');
 
@@ -62,24 +65,55 @@ class FreelancerProfileController extends Controller
             'phone' => $user->phone,
             'profile_photo' => $user->profile_photo,
             'is_active' => $user->is_active,
-            'role' => $this->formatRoleResponse($user->roles->first()),
+            'role' => $this->formatRoleResponse(
+                $user->roles->first()
+            ),
         ];
     }
 
     /**
-     * Formatea la información completa del perfil.
+     * Formatea la información pública del usuario.
+     *
+     * No expone correo, teléfono ni información privada.
      */
-    private function formatProfileResponse(FreelancerProfile $profile): array
+    private function formatPublicUserResponse(User $user): array
     {
+        $user->loadMissing('roles');
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'last_name' => $user->last_name,
+            'maternal_last_name' => $user->maternal_last_name,
+            'profile_photo' => $user->profile_photo,
+            'role' => $this->formatRoleResponse(
+                $user->roles->first()
+            ),
+        ];
+    }
+
+    /**
+     * Formatea la información del perfil.
+     */
+    private function formatProfileResponse(
+        FreelancerProfile $profile,
+        bool $public = false
+    ): array {
         $profile->loadMissing('user.roles');
+
+        $user = null;
+
+        if ($profile->user) {
+            $user = $public
+                ? $this->formatPublicUserResponse($profile->user)
+                : $this->formatPrivateUserResponse($profile->user);
+        }
 
         $data = [
             'id' => $profile->id,
             'user_id' => $profile->user_id,
 
-            'user' => $profile->user
-                ? $this->formatUserResponse($profile->user)
-                : null,
+            'user' => $user,
 
             'description' => $profile->description,
             'specialty' => $profile->specialty,
@@ -127,8 +161,9 @@ class FreelancerProfileController extends Controller
     /**
      * Verifica si el usuario autenticado puede administrar el perfil.
      */
-    private function canManageProfile(FreelancerProfile $profile): bool
-    {
+    private function canManageProfile(
+        FreelancerProfile $profile
+    ): bool {
         $user = auth('api')->user();
 
         if (! $user) {
@@ -139,14 +174,182 @@ class FreelancerProfileController extends Controller
             || $profile->user_id === $user->id;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Public endpoints
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * @OA\Get(
+     *     path="/api/public/profiles",
+     *     operationId="publicListFreelancerProfiles",
+     *     tags={"Freelancer Profiles"},
+     *     summary="Listar públicamente perfiles de freelancers",
+     *     description="Retorna perfiles públicos sin información privada.",
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Perfiles públicos obtenidos exitosamente"
+     *     )
+     * )
+     */
+    public function publicIndex()
+    {
+        $profiles = FreelancerProfile::query()
+            ->with('user.roles')
+            ->whereHas('user', function ($query) {
+                $query->where('is_active', true);
+            })
+            ->latest('created_at')
+            ->get()
+            ->map(
+                fn (FreelancerProfile $profile) =>
+                    $this->formatProfileResponse($profile, true)
+            )
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Perfiles públicos obtenidos exitosamente',
+            'data' => [
+                'profiles' => $profiles,
+            ],
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/public/profiles/{id}",
+     *     operationId="publicShowFreelancerProfile",
+     *     tags={"Freelancer Profiles"},
+     *     summary="Obtener públicamente un perfil por ID",
+     *
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID del perfil del freelancer",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Perfil público obtenido exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Perfil no encontrado"
+     *     )
+     * )
+     */
+    public function publicShow(int $id)
+    {
+        $profile = FreelancerProfile::query()
+            ->with([
+                'user.roles',
+                'services',
+                'briefcases',
+                'availabilities',
+            ])
+            ->whereHas('user', function ($query) {
+                $query->where('is_active', true);
+            })
+            ->find($id);
+
+        if (! $profile) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Perfil público no encontrado.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Perfil público obtenido exitosamente',
+            'data' => [
+                'profile' => $this->formatProfileResponse(
+                    $profile,
+                    true
+                ),
+            ],
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/public/profiles/user/{userId}",
+     *     operationId="publicShowFreelancerProfileByUserId",
+     *     tags={"Freelancer Profiles"},
+     *     summary="Obtener públicamente un perfil por ID de usuario",
+     *
+     *     @OA\Parameter(
+     *         name="userId",
+     *         in="path",
+     *         required=true,
+     *         description="ID del usuario asociado al perfil",
+     *         @OA\Schema(type="integer", example=3)
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Perfil público obtenido exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Perfil no encontrado"
+     *     )
+     * )
+     */
+    public function publicShowByUserId(int $userId)
+    {
+        $profile = FreelancerProfile::query()
+            ->with([
+                'user.roles',
+                'services',
+                'briefcases',
+                'availabilities',
+            ])
+            ->where('user_id', $userId)
+            ->whereHas('user', function ($query) {
+                $query->where('is_active', true);
+            })
+            ->first();
+
+        if (! $profile) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró un perfil público para este usuario.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Perfil público obtenido exitosamente',
+            'data' => [
+                'profile' => $this->formatProfileResponse(
+                    $profile,
+                    true
+                ),
+            ],
+        ]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Protected endpoints
+    |--------------------------------------------------------------------------
+    */
+
     /**
      * @OA\Get(
      *     path="/api/profiles",
      *     operationId="listFreelancerProfiles",
      *     tags={"Freelancer Profiles"},
      *     summary="Listar perfiles de freelancers",
-     *     description="Retorna todos los perfiles de freelancers con su usuario y rol principal.",
+     *     description="Retorna perfiles con información completa para usuarios autenticados.",
      *     security={{"bearerAuth":{}}},
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Perfiles obtenidos exitosamente"
@@ -163,7 +366,8 @@ class FreelancerProfileController extends Controller
             ->latest('created_at')
             ->get()
             ->map(
-                fn($profile) => $this->formatProfileResponse($profile)
+                fn (FreelancerProfile $profile) =>
+                    $this->formatProfileResponse($profile)
             )
             ->values();
 
@@ -187,6 +391,7 @@ class FreelancerProfileController extends Controller
      *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={
      *                 "description",
@@ -201,14 +406,14 @@ class FreelancerProfileController extends Controller
      *             @OA\Property(
      *                 property="user_id",
      *                 type="integer",
-     *                 example=3,
-     *                 description="Solo debe enviarlo un administrador"
+     *                 nullable=true,
+     *                 example=3
      *             ),
      *
      *             @OA\Property(
      *                 property="description",
      *                 type="string",
-     *                 example="Desarrollador Full Stack especializado en aplicaciones web"
+     *                 example="Desarrollador Full Stack"
      *             ),
      *
      *             @OA\Property(
@@ -226,7 +431,7 @@ class FreelancerProfileController extends Controller
      *             @OA\Property(
      *                 property="service_area",
      *                 type="string",
-     *                 example="Desarrollo de sistemas web y aplicaciones empresariales"
+     *                 example="Desarrollo de sistemas web"
      *             ),
      *
      *             @OA\Property(
@@ -239,7 +444,7 @@ class FreelancerProfileController extends Controller
      *             @OA\Property(
      *                 property="experience",
      *                 type="string",
-     *                 example="Tres años desarrollando aplicaciones con Laravel y React"
+     *                 example="Tres años de experiencia"
      *             ),
      *
      *             @OA\Property(
@@ -267,43 +472,37 @@ class FreelancerProfileController extends Controller
      *             @OA\Property(
      *                 property="website",
      *                 type="string",
-     *                 nullable=true,
-     *                 example="https://ejemplo.com"
+     *                 nullable=true
      *             ),
      *
      *             @OA\Property(
      *                 property="facebook",
      *                 type="string",
-     *                 nullable=true,
-     *                 example="https://facebook.com/ejemplo"
+     *                 nullable=true
      *             ),
      *
      *             @OA\Property(
      *                 property="instagram",
      *                 type="string",
-     *                 nullable=true,
-     *                 example="https://instagram.com/ejemplo"
+     *                 nullable=true
      *             ),
      *
      *             @OA\Property(
      *                 property="linkedin",
      *                 type="string",
-     *                 nullable=true,
-     *                 example="https://linkedin.com/in/ejemplo"
+     *                 nullable=true
      *             ),
      *
      *             @OA\Property(
      *                 property="github",
      *                 type="string",
-     *                 nullable=true,
-     *                 example="https://github.com/ejemplo"
+     *                 nullable=true
      *             ),
      *
      *             @OA\Property(
      *                 property="portfolio_url",
      *                 type="string",
-     *                 nullable=true,
-     *                 example="https://behance.net/ejemplo"
+     *                 nullable=true
      *             ),
      *
      *             @OA\Property(
@@ -317,10 +516,6 @@ class FreelancerProfileController extends Controller
      *     @OA\Response(
      *         response=201,
      *         description="Perfil creado exitosamente"
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="No autorizado"
      *     ),
      *     @OA\Response(
      *         response=403,
@@ -355,7 +550,6 @@ class FreelancerProfileController extends Controller
                 'nullable',
                 'integer',
                 'exists:users,id',
-                'unique:freelancer_profiles,user_id',
             ],
 
             'description' => [
@@ -462,54 +656,77 @@ class FreelancerProfileController extends Controller
             ? ($validated['user_id'] ?? $authUser->id)
             : $authUser->id;
 
-        $user = User::with('roles')->find($userId);
+        return DB::transaction(function () use (
+            $validated,
+            $userId
+        ) {
+            /*
+             * Bloquea temporalmente al usuario para evitar que se creen
+             * dos perfiles activos al mismo tiempo.
+             */
+            $user = User::with('roles')
+                ->lockForUpdate()
+                ->find($userId);
 
-        if (! $user || ! $user->hasRole('freelancer')) {
+            if (! $user || ! $user->hasRole('freelancer')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El usuario seleccionado debe tener rol freelancer.',
+                ], 422);
+            }
+
+            /*
+             * SoftDeletes excluye automáticamente los perfiles eliminados.
+             *
+             * Por eso un usuario con un perfil eliminado sí podrá crear
+             * otro perfil nuevo.
+             */
+            $hasActiveProfile = FreelancerProfile::where(
+                'user_id',
+                $userId
+            )->exists();
+
+            if ($hasActiveProfile) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Este usuario ya tiene un perfil de freelancer activo.',
+                ], 422);
+            }
+
+            $profileData = $validated;
+
+            if ($profileData['rate_type'] === 'negotiable') {
+                $profileData['rate'] = null;
+            }
+
+            $profileData['user_id'] = $userId;
+            $profileData['available'] =
+                $profileData['available'] ?? true;
+
+            $profile = FreelancerProfile::create($profileData);
+
+            ActivityLoggerService::logCreate(
+                module: 'FREELANCER_PROFILES',
+                entity: 'freelancer_profiles',
+                entityId: $profile->id,
+                description: "Freelancer profile created for user ID {$userId}"
+            );
+
+            $profile->load([
+                'user.roles',
+                'briefcases',
+            ]);
+
             return response()->json([
-                'success' => false,
-                'message' => 'El usuario seleccionado debe tener rol freelancer.',
-            ], 422);
-        }
-
-        if (FreelancerProfile::where('user_id', $userId)->exists()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Este usuario ya tiene un perfil de freelancer.',
-            ], 422);
-        }
-
-        if ($validated['rate_type'] === 'negotiable') {
-            $validated['rate'] = null;
-        }
-
-        $validated['user_id'] = $userId;
-        $validated['available'] = $validated['available'] ?? true;
-
-        /*
-         * average_rate no se recibe desde el frontend.
-         * Se calculará posteriormente con base en las calificaciones.
-         */
-        $profile = FreelancerProfile::create($validated);
-
-        ActivityLoggerService::logCreate(
-            module: 'FREELANCER_PROFILES',
-            entity: 'freelancer_profiles',
-            entityId: $profile->id,
-            description: "Freelancer profile created for user ID {$userId}"
-        );
-
-        $profile->load([
-            'user.roles',
-            'briefcases',
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Perfil de freelancer creado exitosamente',
-            'data' => [
-                'profile' => $this->formatProfileResponse($profile),
-            ],
-        ], 201);
+                'success' => true,
+                'message' => 'Perfil de freelancer creado exitosamente',
+                'data' => [
+                    'profile' => $this->formatProfileResponse(
+                        $profile
+                    ),
+                ],
+            ], 201);
+        });
     }
 
     /**
@@ -517,25 +734,19 @@ class FreelancerProfileController extends Controller
      *     path="/api/profiles/{id}",
      *     operationId="showFreelancerProfile",
      *     tags={"Freelancer Profiles"},
-     *     summary="Obtener perfil de freelancer por ID de perfil",
-     *     description="Retorna el perfil, usuario, servicios, portafolio y disponibilidad.",
+     *     summary="Obtener perfil de freelancer por ID",
      *     security={{"bearerAuth":{}}},
      *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
-     *         description="ID del perfil del freelancer",
      *         @OA\Schema(type="integer", example=1)
      *     ),
      *
      *     @OA\Response(
      *         response=200,
      *         description="Perfil obtenido exitosamente"
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="No autorizado"
      *     ),
      *     @OA\Response(
      *         response=404,
@@ -563,7 +774,9 @@ class FreelancerProfileController extends Controller
             'success' => true,
             'message' => 'Perfil obtenido exitosamente',
             'data' => [
-                'profile' => $this->formatProfileResponse($profile),
+                'profile' => $this->formatProfileResponse(
+                    $profile
+                ),
             ],
         ]);
     }
@@ -573,29 +786,23 @@ class FreelancerProfileController extends Controller
      *     path="/api/profiles/user/{userId}",
      *     operationId="showFreelancerProfileByUserId",
      *     tags={"Freelancer Profiles"},
-     *     summary="Obtener perfil y portafolio por ID de usuario",
-     *     description="Retorna el perfil profesional y portafolio interno del freelancer utilizando el ID del usuario.",
+     *     summary="Obtener perfil por ID de usuario",
      *     security={{"bearerAuth":{}}},
      *
      *     @OA\Parameter(
      *         name="userId",
      *         in="path",
      *         required=true,
-     *         description="ID del usuario asociado al perfil freelancer",
      *         @OA\Schema(type="integer", example=3)
      *     ),
      *
      *     @OA\Response(
      *         response=200,
-     *         description="Perfil y portafolio obtenidos exitosamente"
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="No autorizado"
+     *         description="Perfil obtenido exitosamente"
      *     ),
      *     @OA\Response(
      *         response=404,
-     *         description="Perfil de freelancer no encontrado"
+     *         description="Perfil no encontrado"
      *     )
      * )
      */
@@ -603,7 +810,9 @@ class FreelancerProfileController extends Controller
     {
         $profile = FreelancerProfile::with([
             'user.roles',
+            'services',
             'briefcases',
+            'availabilities',
         ])
             ->where('user_id', $userId)
             ->first();
@@ -617,9 +826,11 @@ class FreelancerProfileController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Perfil y portafolio obtenidos exitosamente',
+            'message' => 'Perfil obtenido exitosamente',
             'data' => [
-                'profile' => $this->formatProfileResponse($profile),
+                'profile' => $this->formatProfileResponse(
+                    $profile
+                ),
             ],
         ]);
     }
@@ -630,130 +841,18 @@ class FreelancerProfileController extends Controller
      *     operationId="updateFreelancerProfile",
      *     tags={"Freelancer Profiles"},
      *     summary="Actualizar perfil de freelancer",
-     *     description="Actualiza la información profesional del perfil.",
      *     security={{"bearerAuth":{}}},
      *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
-     *         description="ID del perfil a actualizar",
      *         @OA\Schema(type="integer", example=1)
-     *     ),
-     *
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(
-     *                 property="description",
-     *                 type="string",
-     *                 example="Desarrollador Full Stack actualizado"
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="specialty",
-     *                 type="string",
-     *                 example="Arquitectura de software"
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="location",
-     *                 type="string",
-     *                 example="Monterrey, Nuevo León"
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="service_area",
-     *                 type="string",
-     *                 example="Desarrollo de sistemas empresariales"
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="work_mode",
-     *                 type="string",
-     *                 enum={"remote","on_site","hybrid","home_service"},
-     *                 example="hybrid"
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="experience",
-     *                 type="string",
-     *                 example="Experiencia en Laravel, React, MySQL y AWS"
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="rate_type",
-     *                 type="string",
-     *                 enum={"hourly","daily","project","negotiable"},
-     *                 example="hourly"
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="rate",
-     *                 type="number",
-     *                 format="float",
-     *                 nullable=true,
-     *                 example=250
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="languages",
-     *                 type="array",
-     *                 @OA\Items(type="string"),
-     *                 example={"Español","Inglés"}
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="website",
-     *                 type="string",
-     *                 nullable=true
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="facebook",
-     *                 type="string",
-     *                 nullable=true
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="instagram",
-     *                 type="string",
-     *                 nullable=true
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="linkedin",
-     *                 type="string",
-     *                 nullable=true
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="github",
-     *                 type="string",
-     *                 nullable=true
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="portfolio_url",
-     *                 type="string",
-     *                 nullable=true
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="available",
-     *                 type="boolean",
-     *                 example=true
-     *             )
-     *         )
      *     ),
      *
      *     @OA\Response(
      *         response=200,
      *         description="Perfil actualizado correctamente"
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="No autorizado"
      *     ),
      *     @OA\Response(
      *         response=403,
@@ -769,9 +868,13 @@ class FreelancerProfileController extends Controller
      *     )
      * )
      */
-    public function update(Request $request, int $id)
-    {
-        $profile = FreelancerProfile::with('user.roles')->find($id);
+    public function update(
+        Request $request,
+        int $id
+    ) {
+        $profile = FreelancerProfile::with(
+            'user.roles'
+        )->find($id);
 
         if (! $profile) {
             return response()->json([
@@ -902,10 +1005,6 @@ class FreelancerProfileController extends Controller
             ],
         ]);
 
-        /*
-         * Solo valida la combinación de tarifa cuando alguno
-         * de esos dos campos está siendo actualizado.
-         */
         if (
             array_key_exists('rate_type', $validated)
             || array_key_exists('rate', $validated)
@@ -964,7 +1063,9 @@ class FreelancerProfileController extends Controller
             'success' => true,
             'message' => 'Perfil actualizado correctamente',
             'data' => [
-                'profile' => $this->formatProfileResponse($profile),
+                'profile' => $this->formatProfileResponse(
+                    $profile
+                ),
             ],
         ]);
     }
@@ -975,24 +1076,18 @@ class FreelancerProfileController extends Controller
      *     operationId="deleteFreelancerProfile",
      *     tags={"Freelancer Profiles"},
      *     summary="Eliminar perfil de freelancer",
-     *     description="Elimina el perfil especificado.",
      *     security={{"bearerAuth":{}}},
      *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
-     *         description="ID del perfil a eliminar",
      *         @OA\Schema(type="integer", example=1)
      *     ),
      *
      *     @OA\Response(
      *         response=200,
      *         description="Perfil eliminado correctamente"
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="No autorizado"
      *     ),
      *     @OA\Response(
      *         response=403,
@@ -1022,18 +1117,28 @@ class FreelancerProfileController extends Controller
             ], 403);
         }
 
-        ActivityLoggerService::logDelete(
-            module: 'FREELANCER_PROFILES',
-            entity: 'freelancer_profiles',
-            entityId: $profile->id,
-            description: "Freelancer profile ID {$profile->id} deleted"
-        );
+        DB::transaction(function () use ($profile) {
+            $profileId = $profile->id;
+            $userId = $profile->user_id;
 
-        $profile->delete();
+            ActivityLoggerService::logDelete(
+                module: 'FREELANCER_PROFILES',
+                entity: 'freelancer_profiles',
+                entityId: $profileId,
+                description: "Freelancer profile ID {$profileId} deleted for user ID {$userId}"
+            );
+
+            /*
+             * Soft Delete:
+             * conserva el registro como historial, pero deja de
+             * considerarlo como perfil activo.
+             */
+            $profile->delete();
+        });
 
         return response()->json([
             'success' => true,
-            'message' => 'Perfil eliminado correctamente',
+            'message' => 'Perfil eliminado correctamente. El usuario puede crear un nuevo perfil.',
         ]);
     }
 }

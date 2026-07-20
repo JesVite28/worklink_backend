@@ -7,6 +7,8 @@ use App\Models\Service;
 use App\Models\User;
 use App\Services\ActivityLoggerService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 /**
  * @OA\Tag(
@@ -16,6 +18,9 @@ use Illuminate\Http\Request;
  */
 class ServiceController extends Controller
 {
+    /**
+     * Formatea el rol principal del usuario.
+     */
     private function formatRoleResponse($role): ?array
     {
         if (! $role) {
@@ -29,51 +34,129 @@ class ServiceController extends Controller
         ];
     }
 
-    private function formatUserResponse(User $user): array
+    /**
+     * Obtiene preferentemente el rol freelancer.
+     */
+    private function getPrimaryRole(User $user)
     {
         $user->loadMissing('roles');
 
+        return $user->roles->firstWhere('name', 'freelancer')
+            ?? $user->roles->first();
+    }
+
+    /**
+     * Información privada del usuario.
+     *
+     * Solo se utiliza en endpoints protegidos.
+     */
+    private function formatPrivateUserResponse(User $user): array
+    {
         return [
             'id' => $user->id,
             'name' => $user->name,
             'last_name' => $user->last_name,
+            'maternal_last_name' => $user->maternal_last_name,
             'email' => $user->email,
             'phone' => $user->phone,
             'profile_photo' => $user->profile_photo,
             'is_active' => $user->is_active,
-            'role' => $this->formatRoleResponse($user->roles->first()),
+            'role' => $this->formatRoleResponse(
+                $this->getPrimaryRole($user)
+            ),
         ];
     }
 
-    private function formatFreelancerProfileResponse(?FreelancerProfile $profile): ?array
+    /**
+     * Información pública del usuario.
+     *
+     * No expone correo, teléfono ni otros datos privados.
+     */
+    private function formatPublicUserResponse(User $user): array
     {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'last_name' => $user->last_name,
+            'maternal_last_name' => $user->maternal_last_name,
+            'profile_photo' => $user->profile_photo,
+            'role' => $this->formatRoleResponse(
+                $this->getPrimaryRole($user)
+            ),
+        ];
+    }
+
+    /**
+     * Formatea el perfil asociado al servicio.
+     */
+    private function formatFreelancerProfileResponse(
+        ?FreelancerProfile $profile,
+        bool $public = false
+    ): ?array {
         if (! $profile) {
             return null;
         }
 
         $profile->loadMissing('user.roles');
 
+        $user = null;
+
+        if ($profile->user) {
+            $user = $public
+                ? $this->formatPublicUserResponse($profile->user)
+                : $this->formatPrivateUserResponse($profile->user);
+        }
+
         return [
             'id' => $profile->id,
             'user_id' => $profile->user_id,
-            'user' => $profile->user ? $this->formatUserResponse($profile->user) : null,
+            'user' => $user,
+
             'description' => $profile->description,
             'specialty' => $profile->specialty,
-            'hourly_rate' => $profile->hourly_rate,
             'location' => $profile->location,
+            'service_area' => $profile->service_area,
+            'work_mode' => $profile->work_mode,
+            'experience' => $profile->experience,
+
+            'rate_type' => $profile->rate_type,
+            'rate' => $profile->rate,
+
+            'languages' => $profile->languages ?? [],
+
+            'professional_links' => [
+                'website' => $profile->website,
+                'facebook' => $profile->facebook,
+                'instagram' => $profile->instagram,
+                'linkedin' => $profile->linkedin,
+                'github' => $profile->github,
+                'portfolio_url' => $profile->portfolio_url,
+            ],
+
             'available' => $profile->available,
             'average_rate' => $profile->average_rate,
         ];
     }
 
-    private function formatServiceResponse(Service $service): array
-    {
+    /**
+     * Formatea la información del servicio.
+     */
+    private function formatServiceResponse(
+        Service $service,
+        bool $public = false
+    ): array {
         $service->loadMissing('freelancerProfile.user.roles');
 
         return [
             'id' => $service->id,
             'freelancer_id' => $service->freelancer_id,
-            'freelancer_profile' => $this->formatFreelancerProfileResponse($service->freelancerProfile),
+
+            'freelancer_profile' =>
+                $this->formatFreelancerProfileResponse(
+                    $service->freelancerProfile,
+                    $public
+                ),
+
             'title' => $service->title,
             'description' => $service->description,
             'price' => $service->price,
@@ -85,6 +168,9 @@ class ServiceController extends Controller
         ];
     }
 
+    /**
+     * Verifica si el usuario autenticado puede administrar el servicio.
+     */
     private function canManageService(Service $service): bool
     {
         $user = auth('api')->user();
@@ -96,8 +182,127 @@ class ServiceController extends Controller
         $service->loadMissing('freelancerProfile');
 
         return $user->hasRole('admin')
-            || ($service->freelancerProfile && $service->freelancerProfile->user_id === $user->id);
+            || (
+                $service->freelancerProfile
+                && $service->freelancerProfile->user_id === $user->id
+            );
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Public Endpoints
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * @OA\Get(
+     *     path="/api/public/services",
+     *     operationId="publicListServices",
+     *     tags={"Services"},
+     *     summary="Listar servicios públicos",
+     *     description="Retorna servicios activos pertenecientes a freelancers activos.",
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Servicios públicos obtenidos exitosamente"
+     *     )
+     * )
+     */
+    public function publicIndex()
+    {
+        $services = Service::query()
+            ->with('freelancerProfile.user.roles')
+            ->where('is_active', true)
+            ->whereHas('freelancerProfile', function ($profileQuery) {
+                $profileQuery->whereHas(
+                    'user',
+                    function ($userQuery) {
+                        $userQuery->where('is_active', true);
+                    }
+                );
+            })
+            ->latest('created_at')
+            ->get()
+            ->map(
+                fn (Service $service) =>
+                    $this->formatServiceResponse($service, true)
+            )
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Servicios públicos obtenidos exitosamente',
+            'data' => [
+                'services' => $services,
+            ],
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/public/services/{id}",
+     *     operationId="publicShowService",
+     *     tags={"Services"},
+     *     summary="Obtener un servicio público por ID",
+     *
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID del servicio",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Servicio público obtenido exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Servicio público no encontrado"
+     *     )
+     * )
+     */
+    public function publicShow(int $id)
+    {
+        $service = Service::query()
+            ->with('freelancerProfile.user.roles')
+            ->where('is_active', true)
+            ->whereHas('freelancerProfile', function ($profileQuery) {
+                $profileQuery->whereHas(
+                    'user',
+                    function ($userQuery) {
+                        $userQuery->where('is_active', true);
+                    }
+                );
+            })
+            ->whereKey($id)
+            ->first();
+
+        if (! $service) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Servicio público no encontrado.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Servicio público obtenido exitosamente',
+            'data' => [
+                'service' => $this->formatServiceResponse(
+                    $service,
+                    true
+                ),
+            ],
+        ]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Protected Endpoints
+    |--------------------------------------------------------------------------
+    */
 
     /**
      * @OA\Get(
@@ -105,18 +310,30 @@ class ServiceController extends Controller
      *     operationId="listServices",
      *     tags={"Services"},
      *     summary="Listar servicios",
-     *     description="Retorna todos los servicios con su perfil de freelancer, usuario y rol.",
+     *     description="Retorna todos los servicios para usuarios autenticados.",
      *     security={{"bearerAuth":{}}},
-     *     @OA\Response(response=200, description="Servicios obtenidos exitosamente"),
-     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido")
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Servicios obtenidos exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado"
+     *     )
      * )
      */
     public function index()
     {
-        $services = Service::with('freelancerProfile.user.roles')
+        $services = Service::with(
+            'freelancerProfile.user.roles'
+        )
             ->latest('created_at')
             ->get()
-            ->map(fn ($service) => $this->formatServiceResponse($service))
+            ->map(
+                fn (Service $service) =>
+                    $this->formatServiceResponse($service)
+            )
             ->values();
 
         return response()->json([
@@ -134,25 +351,80 @@ class ServiceController extends Controller
      *     operationId="createService",
      *     tags={"Services"},
      *     summary="Crear servicio",
-     *     description="Crea un servicio para un perfil freelancer. Un freelancer crea servicios para su propio perfil; un admin puede indicar freelancer_id.",
+     *     description="Crea un servicio para un perfil freelancer.",
      *     security={{"bearerAuth":{}}},
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"title","description","category"},
-     *             @OA\Property(property="freelancer_id", type="integer", example=1, description="Solo requerido si el usuario autenticado es admin"),
-     *             @OA\Property(property="title", type="string", example="Desarrollo Web en Laravel"),
-     *             @OA\Property(property="description", type="string", example="Creación de API RESTful con Laravel"),
-     *             @OA\Property(property="price", type="number", format="float", example=50.00),
-     *             @OA\Property(property="category", type="string", example="Programación"),
-     *             @OA\Property(property="location", type="string", example="Remoto"),
-     *             @OA\Property(property="is_active", type="boolean", example=true)
+     *
+     *             @OA\Property(
+     *                 property="freelancer_id",
+     *                 type="integer",
+     *                 nullable=true,
+     *                 example=1,
+     *                 description="Solo debe enviarlo un administrador"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="title",
+     *                 type="string",
+     *                 example="Desarrollo Web en Laravel"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="description",
+     *                 type="string",
+     *                 example="Creación de sistemas y API REST con Laravel"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="price",
+     *                 type="number",
+     *                 format="float",
+     *                 nullable=true,
+     *                 example=8500
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="category",
+     *                 type="string",
+     *                 example="Programación"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="location",
+     *                 type="string",
+     *                 nullable=true,
+     *                 example="Remoto"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="is_active",
+     *                 type="boolean",
+     *                 example=true
+     *             )
      *         )
      *     ),
-     *     @OA\Response(response=201, description="Servicio creado exitosamente"),
-     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido"),
-     *     @OA\Response(response=403, description="Sin permisos"),
-     *     @OA\Response(response=422, description="Error de validación")
+     *
+     *     @OA\Response(
+     *         response=201,
+     *         description="Servicio creado exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Sin permisos"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación"
+     *     )
      * )
      */
     public function store(Request $request)
@@ -174,13 +446,47 @@ class ServiceController extends Controller
         }
 
         $validated = $request->validate([
-            'freelancer_id' => 'nullable|integer|exists:freelancer_profiles,id',
-            'title' => 'required|string|max:150',
-            'description' => 'required|string',
-            'price' => 'nullable|numeric|min:0',
-            'category' => 'required|string|max:100',
-            'location' => 'nullable|string|max:150',
-            'is_active' => 'nullable|boolean',
+            'freelancer_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('freelancer_profiles', 'id')
+                    ->whereNull('deleted_at'),
+            ],
+
+            'title' => [
+                'required',
+                'string',
+                'max:150',
+            ],
+
+            'description' => [
+                'required',
+                'string',
+                'max:3000',
+            ],
+
+            'price' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+
+            'category' => [
+                'required',
+                'string',
+                'max:100',
+            ],
+
+            'location' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+
+            'is_active' => [
+                'nullable',
+                'boolean',
+            ],
         ]);
 
         if ($authUser->hasRole('admin')) {
@@ -188,10 +494,16 @@ class ServiceController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'El administrador debe indicar freelancer_id.',
+                    'errors' => [
+                        'freelancer_id' => [
+                            'El campo freelancer_id es obligatorio para administradores.',
+                        ],
+                    ],
                 ], 422);
             }
 
-            $profile = FreelancerProfile::with('user.roles')->find($validated['freelancer_id']);
+            $profile = FreelancerProfile::with('user.roles')
+                ->find($validated['freelancer_id']);
         } else {
             $profile = FreelancerProfile::with('user.roles')
                 ->where('user_id', $authUser->id)
@@ -201,43 +513,56 @@ class ServiceController extends Controller
         if (! $profile) {
             return response()->json([
                 'success' => false,
-                'message' => 'No se encontró un perfil freelancer válido.',
+                'message' => 'No se encontró un perfil freelancer activo.',
             ], 422);
         }
 
-        if (! $profile->user || ! $profile->user->hasRole('freelancer')) {
+        if (
+            ! $profile->user
+            || ! $profile->user->is_active
+            || ! $profile->user->hasRole('freelancer')
+        ) {
             return response()->json([
                 'success' => false,
-                'message' => 'El perfil seleccionado debe pertenecer a un usuario con rol freelancer.',
+                'message' => 'El perfil debe pertenecer a un usuario freelancer activo.',
             ], 422);
         }
 
-        $service = Service::create([
-            'freelancer_id' => $profile->id,
-            'title' => $validated['title'],
-            'description' => $validated['description'],
-            'price' => $validated['price'] ?? null,
-            'category' => $validated['category'],
-            'location' => $validated['location'] ?? null,
-            'is_active' => $validated['is_active'] ?? true,
-        ]);
+        return DB::transaction(function () use (
+            $validated,
+            $profile
+        ) {
+            $service = Service::create([
+                'freelancer_id' => $profile->id,
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'price' => $validated['price'] ?? null,
+                'category' => $validated['category'],
+                'location' => $validated['location'] ?? null,
+                'is_active' => $validated['is_active'] ?? true,
+            ]);
 
-        ActivityLoggerService::logCreate(
-            module: 'SERVICES',
-            entity: 'services',
-            entityId: $service->id,
-            description: "Service {$service->title} created"
-        );
+            ActivityLoggerService::logCreate(
+                module: 'SERVICES',
+                entity: 'services',
+                entityId: $service->id,
+                description: "Service {$service->title} created"
+            );
 
-        $service->load('freelancerProfile.user.roles');
+            $service->load(
+                'freelancerProfile.user.roles'
+            );
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Servicio creado exitosamente',
-            'data' => [
-                'service' => $this->formatServiceResponse($service),
-            ],
-        ], 201);
+            return response()->json([
+                'success' => true,
+                'message' => 'Servicio creado exitosamente',
+                'data' => [
+                    'service' => $this->formatServiceResponse(
+                        $service
+                    ),
+                ],
+            ], 201);
+        });
     }
 
     /**
@@ -246,8 +571,8 @@ class ServiceController extends Controller
      *     operationId="showService",
      *     tags={"Services"},
      *     summary="Obtener servicio por ID",
-     *     description="Retorna los detalles de un servicio.",
      *     security={{"bearerAuth":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -255,19 +580,27 @@ class ServiceController extends Controller
      *         description="ID del servicio",
      *         @OA\Schema(type="integer", example=1)
      *     ),
-     *     @OA\Response(response=200, description="Servicio obtenido exitosamente"),
-     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido"),
-     *     @OA\Response(response=404, description="Servicio no encontrado")
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Servicio obtenido exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Servicio no encontrado"
+     *     )
      * )
      */
     public function show(int $id)
     {
-        $service = Service::with('freelancerProfile.user.roles')->find($id);
+        $service = Service::with(
+            'freelancerProfile.user.roles'
+        )->find($id);
 
         if (! $service) {
             return response()->json([
                 'success' => false,
-                'message' => 'Servicio no encontrado',
+                'message' => 'Servicio no encontrado.',
             ], 404);
         }
 
@@ -275,7 +608,9 @@ class ServiceController extends Controller
             'success' => true,
             'message' => 'Servicio obtenido exitosamente',
             'data' => [
-                'service' => $this->formatServiceResponse($service),
+                'service' => $this->formatServiceResponse(
+                    $service
+                ),
             ],
         ]);
     }
@@ -286,8 +621,8 @@ class ServiceController extends Controller
      *     operationId="updateService",
      *     tags={"Services"},
      *     summary="Actualizar servicio",
-     *     description="Actualiza la información de un servicio existente.",
      *     security={{"bearerAuth":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -295,32 +630,80 @@ class ServiceController extends Controller
      *         description="ID del servicio",
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
-     *             @OA\Property(property="title", type="string", example="Desarrollo Web Actualizado"),
-     *             @OA\Property(property="description", type="string", example="Nueva descripción del servicio"),
-     *             @OA\Property(property="price", type="number", format="float", example=60.00),
-     *             @OA\Property(property="category", type="string", example="Programación"),
-     *             @OA\Property(property="location", type="string", example="Remoto"),
-     *             @OA\Property(property="is_active", type="boolean", example=true)
+     *             @OA\Property(
+     *                 property="title",
+     *                 type="string",
+     *                 example="Desarrollo Web Actualizado"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="description",
+     *                 type="string",
+     *                 example="Nueva descripción del servicio"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="price",
+     *                 type="number",
+     *                 format="float",
+     *                 nullable=true,
+     *                 example=9000
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="category",
+     *                 type="string",
+     *                 example="Programación"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="location",
+     *                 type="string",
+     *                 nullable=true,
+     *                 example="Remoto"
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="is_active",
+     *                 type="boolean",
+     *                 example=true
+     *             )
      *         )
      *     ),
-     *     @OA\Response(response=200, description="Servicio actualizado correctamente"),
-     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido"),
-     *     @OA\Response(response=403, description="Sin permisos"),
-     *     @OA\Response(response=404, description="Servicio no encontrado"),
-     *     @OA\Response(response=422, description="Error de validación")
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Servicio actualizado correctamente"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Sin permisos"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Servicio no encontrado"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación"
+     *     )
      * )
      */
     public function update(Request $request, int $id)
     {
-        $service = Service::with('freelancerProfile')->find($id);
+        $service = Service::with(
+            'freelancerProfile'
+        )->find($id);
 
         if (! $service) {
             return response()->json([
                 'success' => false,
-                'message' => 'Servicio no encontrado',
+                'message' => 'Servicio no encontrado.',
             ], 404);
         }
 
@@ -332,33 +715,76 @@ class ServiceController extends Controller
         }
 
         $validated = $request->validate([
-            'title' => 'sometimes|required|string|max:150',
-            'description' => 'sometimes|required|string',
-            'price' => 'nullable|numeric|min:0',
-            'category' => 'sometimes|required|string|max:100',
-            'location' => 'nullable|string|max:150',
-            'is_active' => 'nullable|boolean',
-        ]);
+            'title' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:150',
+            ],
 
-        $service->update($validated);
+            'description' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:3000',
+            ],
 
-        ActivityLoggerService::logUpdate(
-            module: 'SERVICES',
-            entity: 'services',
-            entityId: $service->id,
-            description: "Service {$service->title} updated"
-        );
+            'price' => [
+                'sometimes',
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
 
-        $service->refresh();
-        $service->load('freelancerProfile.user.roles');
+            'category' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:100',
+            ],
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Servicio actualizado correctamente',
-            'data' => [
-                'service' => $this->formatServiceResponse($service),
+            'location' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:150',
+            ],
+
+            'is_active' => [
+                'sometimes',
+                'boolean',
             ],
         ]);
+
+        return DB::transaction(function () use (
+            $service,
+            $validated
+        ) {
+            $service->update($validated);
+
+            ActivityLoggerService::logUpdate(
+                module: 'SERVICES',
+                entity: 'services',
+                entityId: $service->id,
+                description: "Service {$service->title} updated"
+            );
+
+            $service->refresh();
+
+            $service->load(
+                'freelancerProfile.user.roles'
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Servicio actualizado correctamente',
+                'data' => [
+                    'service' => $this->formatServiceResponse(
+                        $service
+                    ),
+                ],
+            ]);
+        });
     }
 
     /**
@@ -367,8 +793,9 @@ class ServiceController extends Controller
      *     operationId="deleteService",
      *     tags={"Services"},
      *     summary="Eliminar servicio",
-     *     description="Elimina un servicio existente.",
+     *     description="Elimina lógicamente un servicio existente.",
      *     security={{"bearerAuth":{}}},
+     *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
@@ -376,20 +803,31 @@ class ServiceController extends Controller
      *         description="ID del servicio",
      *         @OA\Schema(type="integer", example=1)
      *     ),
-     *     @OA\Response(response=200, description="Servicio eliminado correctamente"),
-     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido"),
-     *     @OA\Response(response=403, description="Sin permisos"),
-     *     @OA\Response(response=404, description="Servicio no encontrado")
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Servicio eliminado correctamente"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Sin permisos"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Servicio no encontrado"
+     *     )
      * )
      */
     public function destroy(int $id)
     {
-        $service = Service::with('freelancerProfile')->find($id);
+        $service = Service::with(
+            'freelancerProfile'
+        )->find($id);
 
         if (! $service) {
             return response()->json([
                 'success' => false,
-                'message' => 'Servicio no encontrado',
+                'message' => 'Servicio no encontrado.',
             ], 404);
         }
 
@@ -400,18 +838,27 @@ class ServiceController extends Controller
             ], 403);
         }
 
-        ActivityLoggerService::logDelete(
-            module: 'SERVICES',
-            entity: 'services',
-            entityId: $service->id,
-            description: "Service {$service->title} deleted"
-        );
+        DB::transaction(function () use ($service) {
+            $serviceId = $service->id;
+            $serviceTitle = $service->title;
 
-        $service->delete();
+            ActivityLoggerService::logDelete(
+                module: 'SERVICES',
+                entity: 'services',
+                entityId: $serviceId,
+                description: "Service {$serviceTitle} deleted"
+            );
+
+            /*
+             * Si el modelo Service utiliza SoftDeletes,
+             * el registro permanecerá como historial.
+             */
+            $service->delete();
+        });
 
         return response()->json([
             'success' => true,
-            'message' => 'Servicio eliminado correctamente',
+            'message' => 'Servicio eliminado correctamente.',
         ]);
     }
 }
