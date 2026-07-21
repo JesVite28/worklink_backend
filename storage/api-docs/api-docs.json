@@ -815,11 +815,12 @@
                     "Briefcases"
                 ],
                 "summary": "Crear proyecto de portafolio",
+                "description": "Crea un proyecto y permite subir una imagen mediante multipart/form-data.",
                 "operationId": "createBriefcase",
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "required": [
                                     "title"
@@ -841,8 +842,9 @@
                                         "nullable": true
                                     },
                                     "image_url": {
+                                        "description": "Imagen opcional del proyecto. Formatos: JPG, JPEG, PNG o WEBP. Máximo 2 MB.",
                                         "type": "string",
-                                        "example": "https://misitio.com/imagen.jpg",
+                                        "format": "binary",
                                         "nullable": true
                                     },
                                     "project_url": {
@@ -865,6 +867,9 @@
                     },
                     "422": {
                         "description": "Error de validación"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
                     }
                 },
                 "security": [
@@ -1003,13 +1008,16 @@
                         "bearerAuth": []
                     }
                 ]
-            },
-            "patch": {
+            }
+        },
+        "/api/briefcases/{id}/update": {
+            "post": {
                 "tags": [
                     "Briefcases"
                 ],
                 "summary": "Actualizar proyecto de portafolio",
-                "operationId": "updateBriefcase",
+                "description": "Actualiza los datos y permite reemplazar o eliminar la imagen mediante multipart/form-data.",
+                "operationId": "updateBriefcaseWithImage",
                 "parameters": [
                     {
                         "name": "id",
@@ -1024,7 +1032,7 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "properties": {
                                     "title": {
@@ -1033,14 +1041,24 @@
                                     },
                                     "description": {
                                         "type": "string",
+                                        "example": "Descripción actualizada del proyecto",
                                         "nullable": true
                                     },
                                     "image_url": {
+                                        "description": "Nueva imagen opcional. Reemplaza la imagen anterior.",
                                         "type": "string",
+                                        "format": "binary",
+                                        "nullable": true
+                                    },
+                                    "remove_image": {
+                                        "description": "Enviar true para eliminar la imagen actual sin subir otra.",
+                                        "type": "boolean",
+                                        "example": false,
                                         "nullable": true
                                     },
                                     "project_url": {
                                         "type": "string",
+                                        "example": "https://github.com/usuario/repositorio-actualizado",
                                         "nullable": true
                                     }
                                 },
@@ -1058,6 +1076,12 @@
                     },
                     "404": {
                         "description": "Proyecto no encontrado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
                     }
                 },
                 "security": [
