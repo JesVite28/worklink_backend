@@ -18,9 +18,6 @@ use Illuminate\Validation\Rule;
  */
 class BriefcaseController extends Controller
 {
-    /**
-     * Formatea la información de un rol.
-     */
     private function formatRoleResponse($role): ?array
     {
         if (! $role) {
@@ -34,9 +31,6 @@ class BriefcaseController extends Controller
         ];
     }
 
-    /**
-     * Obtiene preferentemente el rol freelancer.
-     */
     private function getPrimaryRole(User $user)
     {
         $user->loadMissing('roles');
@@ -46,9 +40,7 @@ class BriefcaseController extends Controller
     }
 
     /**
-     * Formatea la información privada del usuario.
-     *
-     * Se utiliza únicamente en endpoints protegidos.
+     * Información privada para endpoints protegidos.
      */
     private function formatPrivateUserResponse(User $user): array
     {
@@ -68,9 +60,7 @@ class BriefcaseController extends Controller
     }
 
     /**
-     * Formatea la información pública del usuario.
-     *
-     * No expone correo electrónico, teléfono ni datos privados.
+     * Información segura para endpoints públicos.
      */
     private function formatPublicUserResponse(User $user): array
     {
@@ -86,9 +76,6 @@ class BriefcaseController extends Controller
         ];
     }
 
-    /**
-     * Formatea el perfil freelancer relacionado con el portafolio.
-     */
     private function formatFreelancerProfileResponse(
         ?FreelancerProfile $profile,
         bool $public = false
@@ -138,9 +125,6 @@ class BriefcaseController extends Controller
         ];
     }
 
-    /**
-     * Formatea la información del proyecto de portafolio.
-     */
     private function formatBriefcaseResponse(
         Briefcase $briefcase,
         bool $public = false
@@ -169,49 +153,11 @@ class BriefcaseController extends Controller
     }
 
     /**
-     * Verifica si el usuario autenticado puede administrar el proyecto.
+     * Consulta base para portafolios públicos.
      */
-    private function canManageBriefcase(
-        Briefcase $briefcase
-    ): bool {
-        $user = auth('api')->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        $briefcase->loadMissing('freelancerProfile');
-
-        return $user->hasRole('admin')
-            || (
-                $briefcase->freelancerProfile
-                && $briefcase->freelancerProfile->user_id === $user->id
-            );
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Public Endpoints
-    |--------------------------------------------------------------------------
-    */
-
-    /**
-     * @OA\Get(
-     *     path="/api/public/briefcases",
-     *     operationId="publicListBriefcases",
-     *     tags={"Briefcases"},
-     *     summary="Listar proyectos públicos de portafolio",
-     *     description="Retorna los proyectos pertenecientes a freelancers activos sin exponer información privada.",
-     *
-     *     @OA\Response(
-     *         response=200,
-     *         description="Portafolios públicos obtenidos exitosamente"
-     *     )
-     * )
-     */
-    public function publicIndex()
+    private function publicBriefcaseQuery()
     {
-        $briefcases = Briefcase::query()
+        return Briefcase::query()
             ->with('freelancerProfile.user.roles')
             ->whereHas(
                 'freelancerProfile',
@@ -233,7 +179,89 @@ class BriefcaseController extends Controller
                         }
                     );
                 }
+            );
+    }
+
+    /**
+     * Obtiene un perfil freelancer visible públicamente.
+     */
+    private function findPublicFreelancerProfile(
+        int $freelancerId
+    ): ?FreelancerProfile {
+        return FreelancerProfile::query()
+            ->with('user.roles')
+            ->whereKey($freelancerId)
+            ->whereHas(
+                'user',
+                function ($userQuery) {
+                    $userQuery
+                        ->where('is_active', true)
+                        ->whereHas(
+                            'roles',
+                            function ($roleQuery) {
+                                $roleQuery->where(
+                                    'name',
+                                    'freelancer'
+                                );
+                            }
+                        );
+                }
             )
+            ->first();
+    }
+
+    private function canManageBriefcase(
+        Briefcase $briefcase
+    ): bool {
+        $user = auth('api')->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        $briefcase->loadMissing('freelancerProfile');
+
+        return $user->hasRole('admin')
+            || (
+                $briefcase->freelancerProfile
+                && $briefcase->freelancerProfile->user_id === $user->id
+            );
+    }
+
+    private function canViewPrivateFreelancer(
+        FreelancerProfile $profile
+    ): bool {
+        $user = auth('api')->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        return $user->hasRole('admin')
+            || $profile->user_id === $user->id;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Public Endpoints
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * @OA\Get(
+     *     path="/api/public/briefcases",
+     *     operationId="publicListBriefcases",
+     *     tags={"Briefcases"},
+     *     summary="Listar todos los proyectos públicos",
+     *     @OA\Response(
+     *         response=200,
+     *         description="Portafolios públicos obtenidos exitosamente"
+     *     )
+     * )
+     */
+    public function publicIndex()
+    {
+        $briefcases = $this->publicBriefcaseQuery()
             ->latest('created_at')
             ->get()
             ->map(
@@ -256,6 +284,72 @@ class BriefcaseController extends Controller
 
     /**
      * @OA\Get(
+     *     path="/api/public/briefcases/freelancer/{freelancerId}",
+     *     operationId="publicBriefcasesByFreelancer",
+     *     tags={"Briefcases"},
+     *     summary="Obtener portafolio público por ID de freelancer",
+     *
+     *     @OA\Parameter(
+     *         name="freelancerId",
+     *         in="path",
+     *         required=true,
+     *         description="ID del perfil freelancer",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Portafolio obtenido exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Perfil freelancer no encontrado"
+     *     )
+     * )
+     */
+    public function publicByFreelancer(int $freelancerId)
+    {
+        $profile = $this->findPublicFreelancerProfile(
+            $freelancerId
+        );
+
+        if (! $profile) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Perfil freelancer público no encontrado.',
+            ], 404);
+        }
+
+        $briefcases = Briefcase::query()
+            ->with('freelancerProfile.user.roles')
+            ->where('freelancer_id', $profile->id)
+            ->latest('created_at')
+            ->get()
+            ->map(
+                fn (Briefcase $briefcase) =>
+                    $this->formatBriefcaseResponse(
+                        $briefcase,
+                        true
+                    )
+            )
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Portafolio público del freelancer obtenido exitosamente',
+            'data' => [
+                'freelancer_profile' =>
+                    $this->formatFreelancerProfileResponse(
+                        $profile,
+                        true
+                    ),
+                'briefcases' => $briefcases,
+            ],
+        ]);
+    }
+
+    /**
+     * @OA\Get(
      *     path="/api/public/briefcases/{id}",
      *     operationId="publicShowBriefcase",
      *     tags={"Briefcases"},
@@ -265,7 +359,7 @@ class BriefcaseController extends Controller
      *         name="id",
      *         in="path",
      *         required=true,
-     *         description="ID del proyecto de portafolio",
+     *         description="ID del proyecto",
      *         @OA\Schema(type="integer", example=1)
      *     ),
      *
@@ -281,29 +375,7 @@ class BriefcaseController extends Controller
      */
     public function publicShow(int $id)
     {
-        $briefcase = Briefcase::query()
-            ->with('freelancerProfile.user.roles')
-            ->whereHas(
-                'freelancerProfile',
-                function ($profileQuery) {
-                    $profileQuery->whereHas(
-                        'user',
-                        function ($userQuery) {
-                            $userQuery
-                                ->where('is_active', true)
-                                ->whereHas(
-                                    'roles',
-                                    function ($roleQuery) {
-                                        $roleQuery->where(
-                                            'name',
-                                            'freelancer'
-                                        );
-                                    }
-                                );
-                        }
-                    );
-                }
-            )
+        $briefcase = $this->publicBriefcaseQuery()
             ->whereKey($id)
             ->first();
 
@@ -318,10 +390,11 @@ class BriefcaseController extends Controller
             'success' => true,
             'message' => 'Proyecto público obtenido exitosamente',
             'data' => [
-                'briefcase' => $this->formatBriefcaseResponse(
-                    $briefcase,
-                    true
-                ),
+                'briefcase' =>
+                    $this->formatBriefcaseResponse(
+                        $briefcase,
+                        true
+                    ),
             ],
         ]);
     }
@@ -338,16 +411,11 @@ class BriefcaseController extends Controller
      *     operationId="listBriefcases",
      *     tags={"Briefcases"},
      *     summary="Listar portafolios",
-     *     description="Retorna todos los proyectos de portafolio para usuarios autenticados.",
      *     security={{"bearerAuth":{}}},
      *
      *     @OA\Response(
      *         response=200,
      *         description="Portafolios obtenidos exitosamente"
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="No autorizado"
      *     )
      * )
      */
@@ -374,12 +442,162 @@ class BriefcaseController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/briefcases/me",
+     *     operationId="listMyBriefcases",
+     *     tags={"Briefcases"},
+     *     summary="Obtener mi portafolio",
+     *     description="Obtiene los proyectos del perfil freelancer asociado al usuario autenticado.",
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Portafolio obtenido exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="El usuario no tiene rol freelancer"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Perfil freelancer no encontrado"
+     *     )
+     * )
+     */
+    public function myBriefcases()
+    {
+        $authUser = auth('api')->user();
+
+        if (! $authUser) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado.',
+            ], 401);
+        }
+
+        if (! $authUser->hasRole('freelancer')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo los usuarios freelancer tienen portafolio.',
+            ], 403);
+        }
+
+        $profile = FreelancerProfile::with('user.roles')
+            ->where('user_id', $authUser->id)
+            ->first();
+
+        if (! $profile) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró un perfil freelancer activo para tu cuenta.',
+            ], 404);
+        }
+
+        $briefcases = Briefcase::query()
+            ->with('freelancerProfile.user.roles')
+            ->where('freelancer_id', $profile->id)
+            ->latest('created_at')
+            ->get()
+            ->map(
+                fn (Briefcase $briefcase) =>
+                    $this->formatBriefcaseResponse($briefcase)
+            )
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tu portafolio fue obtenido exitosamente',
+            'data' => [
+                'freelancer_profile' =>
+                    $this->formatFreelancerProfileResponse(
+                        $profile
+                    ),
+                'briefcases' => $briefcases,
+            ],
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/briefcases/freelancer/{freelancerId}",
+     *     operationId="privateBriefcasesByFreelancer",
+     *     tags={"Briefcases"},
+     *     summary="Obtener portafolio privado por ID de freelancer",
+     *     description="Solo puede consultarlo el propietario del perfil o un administrador.",
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="freelancerId",
+     *         in="path",
+     *         required=true,
+     *         description="ID del perfil freelancer",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Portafolio obtenido exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Sin permisos"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Perfil freelancer no encontrado"
+     *     )
+     * )
+     */
+    public function byFreelancer(int $freelancerId)
+    {
+        $profile = FreelancerProfile::with(
+            'user.roles'
+        )->find($freelancerId);
+
+        if (! $profile) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Perfil freelancer no encontrado.',
+            ], 404);
+        }
+
+        if (! $this->canViewPrivateFreelancer($profile)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para consultar este portafolio privado.',
+            ], 403);
+        }
+
+        $briefcases = Briefcase::query()
+            ->with('freelancerProfile.user.roles')
+            ->where('freelancer_id', $profile->id)
+            ->latest('created_at')
+            ->get()
+            ->map(
+                fn (Briefcase $briefcase) =>
+                    $this->formatBriefcaseResponse($briefcase)
+            )
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Portafolio del freelancer obtenido exitosamente',
+            'data' => [
+                'freelancer_profile' =>
+                    $this->formatFreelancerProfileResponse(
+                        $profile
+                    ),
+                'briefcases' => $briefcases,
+            ],
+        ]);
+    }
+
+    /**
      * @OA\Post(
      *     path="/api/briefcases",
      *     operationId="createBriefcase",
      *     tags={"Briefcases"},
      *     summary="Crear proyecto de portafolio",
-     *     description="Crea un proyecto para el portafolio de un freelancer.",
      *     security={{"bearerAuth":{}}},
      *
      *     @OA\RequestBody(
@@ -428,10 +646,6 @@ class BriefcaseController extends Controller
      *     @OA\Response(
      *         response=201,
      *         description="Proyecto creado exitosamente"
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="No autorizado"
      *     ),
      *     @OA\Response(
      *         response=403,
@@ -582,14 +796,13 @@ class BriefcaseController extends Controller
      *     path="/api/briefcases/{id}",
      *     operationId="showBriefcase",
      *     tags={"Briefcases"},
-     *     summary="Obtener proyecto de portafolio por ID",
+     *     summary="Obtener proyecto por ID",
      *     security={{"bearerAuth":{}}},
      *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
-     *         description="ID del proyecto",
      *         @OA\Schema(type="integer", example=1)
      *     ),
      *
@@ -620,15 +833,16 @@ class BriefcaseController extends Controller
             'success' => true,
             'message' => 'Proyecto obtenido exitosamente',
             'data' => [
-                'briefcase' => $this->formatBriefcaseResponse(
-                    $briefcase
-                ),
+                'briefcase' =>
+                    $this->formatBriefcaseResponse(
+                        $briefcase
+                    ),
             ],
         ]);
     }
 
     /**
-     * @OA\Put(
+     * @OA\Patch(
      *     path="/api/briefcases/{id}",
      *     operationId="updateBriefcase",
      *     tags={"Briefcases"},
@@ -639,7 +853,6 @@ class BriefcaseController extends Controller
      *         name="id",
      *         in="path",
      *         required=true,
-     *         description="ID del proyecto",
      *         @OA\Schema(type="integer", example=1)
      *     ),
      *
@@ -656,22 +869,19 @@ class BriefcaseController extends Controller
      *             @OA\Property(
      *                 property="description",
      *                 type="string",
-     *                 nullable=true,
-     *                 example="Nueva descripción del proyecto"
+     *                 nullable=true
      *             ),
      *
      *             @OA\Property(
      *                 property="image_url",
      *                 type="string",
-     *                 nullable=true,
-     *                 example="https://misitio.com/nueva-imagen.jpg"
+     *                 nullable=true
      *             ),
      *
      *             @OA\Property(
      *                 property="project_url",
      *                 type="string",
-     *                 nullable=true,
-     *                 example="https://github.com/usuario/nuevo-repositorio"
+     *                 nullable=true
      *             )
      *         )
      *     ),
@@ -687,10 +897,6 @@ class BriefcaseController extends Controller
      *     @OA\Response(
      *         response=404,
      *         description="Proyecto no encontrado"
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Error de validación"
      *     )
      * )
      */
@@ -784,14 +990,12 @@ class BriefcaseController extends Controller
      *     operationId="deleteBriefcase",
      *     tags={"Briefcases"},
      *     summary="Eliminar proyecto de portafolio",
-     *     description="Elimina lógicamente un proyecto de portafolio.",
      *     security={{"bearerAuth":{}}},
      *
      *     @OA\Parameter(
      *         name="id",
      *         in="path",
      *         required=true,
-     *         description="ID del proyecto",
      *         @OA\Schema(type="integer", example=1)
      *     ),
      *
@@ -840,10 +1044,6 @@ class BriefcaseController extends Controller
                 description: "Briefcase project {$briefcaseTitle} deleted"
             );
 
-            /*
-             * Si el modelo Briefcase usa SoftDeletes,
-             * el registro permanece como historial.
-             */
             $briefcase->delete();
         });
 

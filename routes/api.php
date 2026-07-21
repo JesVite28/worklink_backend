@@ -94,6 +94,11 @@ Route::prefix('public')->group(function () {
     );
 
     Route::get(
+        '/briefcases/freelancer/{freelancerId}',
+        [BriefcaseController::class, 'publicByFreelancer']
+    )->whereNumber('freelancerId');
+
+    Route::get(
         '/briefcases/{id}',
         [BriefcaseController::class, 'publicShow']
     )->whereNumber('id');
@@ -359,10 +364,26 @@ Route::middleware('auth.api')->group(function () {
     |--------------------------------------------------------------------------
     */
 
+    /*
+|--------------------------------------------------------------------------
+| Briefcases / Portfolios
+|--------------------------------------------------------------------------
+*/
+
     Route::get(
         '/briefcases',
         [BriefcaseController::class, 'index']
     );
+
+    Route::get(
+        '/briefcases/me',
+        [BriefcaseController::class, 'myBriefcases']
+    );
+
+    Route::get(
+        '/briefcases/freelancer/{freelancerId}',
+        [BriefcaseController::class, 'byFreelancer']
+    )->whereNumber('freelancerId');
 
     Route::post(
         '/briefcases',

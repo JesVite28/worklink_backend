@@ -725,12 +725,40 @@
                 "tags": [
                     "Briefcases"
                 ],
-                "summary": "Listar proyectos públicos de portafolio",
-                "description": "Retorna los proyectos pertenecientes a freelancers activos sin exponer información privada.",
+                "summary": "Listar todos los proyectos públicos",
                 "operationId": "publicListBriefcases",
                 "responses": {
                     "200": {
                         "description": "Portafolios públicos obtenidos exitosamente"
+                    }
+                }
+            }
+        },
+        "/api/public/briefcases/freelancer/{freelancerId}": {
+            "get": {
+                "tags": [
+                    "Briefcases"
+                ],
+                "summary": "Obtener portafolio público por ID de freelancer",
+                "operationId": "publicBriefcasesByFreelancer",
+                "parameters": [
+                    {
+                        "name": "freelancerId",
+                        "in": "path",
+                        "description": "ID del perfil freelancer",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Portafolio obtenido exitosamente"
+                    },
+                    "404": {
+                        "description": "Perfil freelancer no encontrado"
                     }
                 }
             }
@@ -746,7 +774,7 @@
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID del proyecto de portafolio",
+                        "description": "ID del proyecto",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -770,14 +798,10 @@
                     "Briefcases"
                 ],
                 "summary": "Listar portafolios",
-                "description": "Retorna todos los proyectos de portafolio para usuarios autenticados.",
                 "operationId": "listBriefcases",
                 "responses": {
                     "200": {
                         "description": "Portafolios obtenidos exitosamente"
-                    },
-                    "401": {
-                        "description": "No autorizado"
                     }
                 },
                 "security": [
@@ -791,7 +815,6 @@
                     "Briefcases"
                 ],
                 "summary": "Crear proyecto de portafolio",
-                "description": "Crea un proyecto para el portafolio de un freelancer.",
                 "operationId": "createBriefcase",
                 "requestBody": {
                     "required": true,
@@ -837,9 +860,6 @@
                     "201": {
                         "description": "Proyecto creado exitosamente"
                     },
-                    "401": {
-                        "description": "No autorizado"
-                    },
                     "403": {
                         "description": "Sin permisos"
                     },
@@ -854,18 +874,81 @@
                 ]
             }
         },
+        "/api/briefcases/me": {
+            "get": {
+                "tags": [
+                    "Briefcases"
+                ],
+                "summary": "Obtener mi portafolio",
+                "description": "Obtiene los proyectos del perfil freelancer asociado al usuario autenticado.",
+                "operationId": "listMyBriefcases",
+                "responses": {
+                    "200": {
+                        "description": "Portafolio obtenido exitosamente"
+                    },
+                    "403": {
+                        "description": "El usuario no tiene rol freelancer"
+                    },
+                    "404": {
+                        "description": "Perfil freelancer no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/briefcases/freelancer/{freelancerId}": {
+            "get": {
+                "tags": [
+                    "Briefcases"
+                ],
+                "summary": "Obtener portafolio privado por ID de freelancer",
+                "description": "Solo puede consultarlo el propietario del perfil o un administrador.",
+                "operationId": "privateBriefcasesByFreelancer",
+                "parameters": [
+                    {
+                        "name": "freelancerId",
+                        "in": "path",
+                        "description": "ID del perfil freelancer",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Portafolio obtenido exitosamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Perfil freelancer no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/briefcases/{id}": {
             "get": {
                 "tags": [
                     "Briefcases"
                 ],
-                "summary": "Obtener proyecto de portafolio por ID",
+                "summary": "Obtener proyecto por ID",
                 "operationId": "showBriefcase",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID del proyecto",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -887,7 +970,41 @@
                     }
                 ]
             },
-            "put": {
+            "delete": {
+                "tags": [
+                    "Briefcases"
+                ],
+                "summary": "Eliminar proyecto de portafolio",
+                "operationId": "deleteBriefcase",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Proyecto eliminado correctamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Proyecto no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
                 "tags": [
                     "Briefcases"
                 ],
@@ -897,7 +1014,6 @@
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID del proyecto",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -917,17 +1033,14 @@
                                     },
                                     "description": {
                                         "type": "string",
-                                        "example": "Nueva descripción del proyecto",
                                         "nullable": true
                                     },
                                     "image_url": {
                                         "type": "string",
-                                        "example": "https://misitio.com/nueva-imagen.jpg",
                                         "nullable": true
                                     },
                                     "project_url": {
                                         "type": "string",
-                                        "example": "https://github.com/usuario/nuevo-repositorio",
                                         "nullable": true
                                     }
                                 },
@@ -939,45 +1052,6 @@
                 "responses": {
                     "200": {
                         "description": "Proyecto actualizado correctamente"
-                    },
-                    "403": {
-                        "description": "Sin permisos"
-                    },
-                    "404": {
-                        "description": "Proyecto no encontrado"
-                    },
-                    "422": {
-                        "description": "Error de validación"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "Briefcases"
-                ],
-                "summary": "Eliminar proyecto de portafolio",
-                "description": "Elimina lógicamente un proyecto de portafolio.",
-                "operationId": "deleteBriefcase",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID del proyecto",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "example": 1
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Proyecto eliminado correctamente"
                     },
                     "403": {
                         "description": "Sin permisos"
