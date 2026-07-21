@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 /**
  * @OA\Info(
@@ -201,7 +202,13 @@ class AuthController extends Controller
                 'name' => 'required|string|max:100',
                 'last_name' => 'required|string|max:100',
                 'maternal_last_name' => 'nullable|string|max:100',
-                'email' => 'required|email|max:150|unique:users,email',
+                'email' => [
+                    'required',
+                    'email',
+                    'max:150',
+                    Rule::unique('users', 'email')
+                        ->whereNull('deleted_at'),
+                ],
                 'password' => 'required|string|min:8|confirmed',
                 'role' => 'required|string|in:cliente,freelancer,empresa',
                 'phone' => 'nullable|string|max:20',

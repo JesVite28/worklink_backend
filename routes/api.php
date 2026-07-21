@@ -174,6 +174,16 @@ Route::middleware('auth.api')->group(function () {
         [UserController::class, 'destroyMe']
     );
 
+    Route::post(
+        '/users/me/profile-photo',
+        [UserController::class, 'updateMyProfilePhoto']
+    );
+
+    Route::delete(
+        '/users/me/profile-photo',
+        [UserController::class, 'destroyMyProfilePhoto']
+    );
+
 
     /*
     |--------------------------------------------------------------------------

@@ -8,6 +8,7 @@ use App\Services\ActivityLoggerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 /**
@@ -34,7 +35,15 @@ class UserController extends Controller
             'maternal_last_name' => $user->maternal_last_name,
             'email' => $user->email,
             'phone' => $user->phone,
+
+            // Ruta interna almacenada en la base de datos.
             'profile_photo' => $user->profile_photo,
+
+            // URL completa lista para utilizarse en el frontend.
+            'profile_photo_url' => $user->profile_photo
+                ? asset(Storage::url($user->profile_photo))
+                : null,
+
             'is_active' => $user->is_active,
 
             'role' => $role ? [
@@ -55,11 +64,11 @@ class UserController extends Controller
     */
 
     /**
-     * @OA\Put(
+     * @OA\Patch(
      *     path="/api/users/me",
      *     operationId="updateMyUserAccount",
      *     summary="Actualizar mi cuenta",
-     *     description="Permite al usuario autenticado actualizar únicamente sus propios datos personales.",
+     *     description="Permite al usuario autenticado actualizar sus propios datos personales. La fotografía se modifica desde /api/users/me/profile-photo.",
      *     tags={"Users"},
      *     security={{"bearerAuth":{}}},
      *
@@ -72,41 +81,29 @@ class UserController extends Controller
      *                 type="string",
      *                 example="Adrian"
      *             ),
-     *
      *             @OA\Property(
      *                 property="last_name",
      *                 type="string",
      *                 example="Vite"
      *             ),
-     *
      *             @OA\Property(
      *                 property="maternal_last_name",
      *                 type="string",
      *                 nullable=true,
      *                 example="Espinosa"
      *             ),
-     *
      *             @OA\Property(
      *                 property="email",
      *                 type="string",
      *                 format="email",
      *                 example="adrian@example.com"
      *             ),
-     *
      *             @OA\Property(
      *                 property="phone",
      *                 type="string",
      *                 nullable=true,
      *                 example="7711234567"
      *             ),
-     *
-     *             @OA\Property(
-     *                 property="profile_photo",
-     *                 type="string",
-     *                 nullable=true,
-     *                 example="https://example.com/profile.jpg"
-     *             ),
-     *
      *             @OA\Property(
      *                 property="current_password",
      *                 type="string",
@@ -114,14 +111,12 @@ class UserController extends Controller
      *                 example="password123",
      *                 description="Obligatoria únicamente para cambiar la contraseña"
      *             ),
-     *
      *             @OA\Property(
      *                 property="password",
      *                 type="string",
      *                 nullable=true,
      *                 example="newPassword123"
      *             ),
-     *
      *             @OA\Property(
      *                 property="password_confirmation",
      *                 type="string",
@@ -135,12 +130,10 @@ class UserController extends Controller
      *         response=200,
      *         description="Cuenta actualizada exitosamente"
      *     ),
-     *
      *     @OA\Response(
      *         response=401,
      *         description="No autorizado"
      *     ),
-     *
      *     @OA\Response(
      *         response=422,
      *         description="Datos inválidos"
@@ -186,6 +179,7 @@ class UserController extends Controller
                 'email',
                 'max:150',
                 Rule::unique('users', 'email')
+                    ->whereNull('deleted_at')
                     ->ignore($user->id),
             ],
 
@@ -194,13 +188,6 @@ class UserController extends Controller
                 'nullable',
                 'string',
                 'max:20',
-            ],
-
-            'profile_photo' => [
-                'sometimes',
-                'nullable',
-                'string',
-                'max:255',
             ],
 
             'current_password' => [
@@ -218,10 +205,6 @@ class UserController extends Controller
             ],
         ]);
 
-        /*
-         * Para cambiar la contraseña se debe comprobar primero
-         * la contraseña actual.
-         */
         if (! empty($validated['password'])) {
             if (
                 empty($validated['current_password'])
@@ -241,9 +224,6 @@ class UserController extends Controller
                 ], 422);
             }
 
-            /*
-             * Evita reemplazar la contraseña por la misma.
-             */
             if (
                 Hash::check(
                     $validated['password'],
@@ -265,14 +245,15 @@ class UserController extends Controller
         DB::transaction(function () use ($user, $validated) {
             $data = [];
 
-            foreach ([
-                'name',
-                'last_name',
-                'maternal_last_name',
-                'email',
-                'phone',
-                'profile_photo',
-            ] as $field) {
+            foreach (
+                [
+                    'name',
+                    'last_name',
+                    'maternal_last_name',
+                    'email',
+                    'phone',
+                ] as $field
+            ) {
                 if (array_key_exists($field, $validated)) {
                     $data[$field] = $validated[$field];
                 }
@@ -309,6 +290,192 @@ class UserController extends Controller
     }
 
     /**
+     * @OA\Post(
+     *     path="/api/users/me/profile-photo",
+     *     operationId="updateMyProfilePhoto",
+     *     summary="Actualizar mi foto de perfil",
+     *     description="Sube o reemplaza la foto del usuario autenticado.",
+     *     tags={"Users"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *
+     *             @OA\Schema(
+     *                 required={"profile_photo"},
+     *
+     *                 @OA\Property(
+     *                     property="profile_photo",
+     *                     type="string",
+     *                     format="binary",
+     *                     description="Imagen JPG, JPEG, PNG o WEBP. Tamaño máximo: 2 MB."
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Foto de perfil actualizada exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Archivo inválido"
+     *     )
+     * )
+     */
+    public function updateMyProfilePhoto(Request $request)
+    {
+        $user = auth('api')->user();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado.',
+            ], 401);
+        }
+
+        $request->validate([
+            'profile_photo' => [
+                'required',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:2048',
+            ],
+        ]);
+
+        $oldPhotoPath = $user->profile_photo;
+
+        $newPhotoPath = $request
+            ->file('profile_photo')
+            ->store('profile_photos', 'public');
+
+        try {
+            DB::transaction(function () use (
+                $user,
+                $newPhotoPath
+            ) {
+                $user->update([
+                    'profile_photo' => $newPhotoPath,
+                ]);
+
+                ActivityLoggerService::logUpdate(
+                    module: 'USERS',
+                    entity: 'users',
+                    entityId: $user->id,
+                    description: "User {$user->name} {$user->last_name} updated their profile photo"
+                );
+            });
+        } catch (\Throwable $exception) {
+            Storage::disk('public')->delete($newPhotoPath);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo actualizar la foto de perfil.',
+                'error' => $exception->getMessage(),
+            ], 500);
+        }
+
+        if (
+            $oldPhotoPath
+            && $oldPhotoPath !== $newPhotoPath
+            && Storage::disk('public')->exists($oldPhotoPath)
+        ) {
+            Storage::disk('public')->delete($oldPhotoPath);
+        }
+
+        $user->refresh();
+        $user->load('roles');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tu foto de perfil fue actualizada exitosamente.',
+            'data' => [
+                'user' => $this->formatUserResponse($user),
+            ],
+        ]);
+    }
+
+    /**
+     * @OA\Delete(
+     *     path="/api/users/me/profile-photo",
+     *     operationId="deleteMyProfilePhoto",
+     *     summary="Eliminar mi foto de perfil",
+     *     description="Elimina la foto de perfil del usuario autenticado.",
+     *     tags={"Users"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Foto de perfil eliminada exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="El usuario no tiene una foto de perfil"
+     *     )
+     * )
+     */
+    public function destroyMyProfilePhoto()
+    {
+        $user = auth('api')->user();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado.',
+            ], 401);
+        }
+
+        if (! $user->profile_photo) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tu cuenta no tiene una foto de perfil.',
+            ], 404);
+        }
+
+        $oldPhotoPath = $user->profile_photo;
+
+        DB::transaction(function () use ($user) {
+            $user->update([
+                'profile_photo' => null,
+            ]);
+
+            ActivityLoggerService::logUpdate(
+                module: 'USERS',
+                entity: 'users',
+                entityId: $user->id,
+                description: "User {$user->name} {$user->last_name} removed their profile photo"
+            );
+        });
+
+        if (Storage::disk('public')->exists($oldPhotoPath)) {
+            Storage::disk('public')->delete($oldPhotoPath);
+        }
+
+        $user->refresh();
+        $user->load('roles');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tu foto de perfil fue eliminada exitosamente.',
+            'data' => [
+                'user' => $this->formatUserResponse($user),
+            ],
+        ]);
+    }
+
+    /**
      * @OA\Delete(
      *     path="/api/users/me",
      *     operationId="deleteMyUserAccount",
@@ -335,17 +502,14 @@ class UserController extends Controller
      *         response=200,
      *         description="Cuenta eliminada exitosamente"
      *     ),
-     *
      *     @OA\Response(
      *         response=401,
      *         description="No autorizado"
      *     ),
-     *
      *     @OA\Response(
      *         response=403,
-     *         description="Contraseña incorrecta"
+     *         description="Operación no permitida"
      *     ),
-     *
      *     @OA\Response(
      *         response=422,
      *         description="Datos inválidos"
@@ -382,10 +546,6 @@ class UserController extends Controller
             ], 422);
         }
 
-        /*
-         * Se evita que una cuenta administrativa se elimine
-         * accidentalmente desde el endpoint personal.
-         */
         if ($user->hasRole('admin')) {
             return response()->json([
                 'success' => false,
@@ -401,24 +561,13 @@ class UserController extends Controller
                 description: "User {$user->name} {$user->last_name} deleted their own account"
             );
 
-            /*
-             * Soft Delete:
-             * el registro permanece como historial,
-             * pero deja de considerarse una cuenta activa.
-             */
             $user->delete();
         });
 
-        /*
-         * Invalida el token JWT actual.
-         */
         try {
             auth('api')->logout();
         } catch (\Throwable $exception) {
-            /*
-             * Aunque la invalidación falle, el token ya no podrá
-             * autenticar al usuario porque la cuenta fue eliminada.
-             */
+            // La cuenta ya está eliminada lógicamente.
         }
 
         return response()->json([
@@ -438,85 +587,84 @@ class UserController extends Controller
      *     path="/api/users",
      *     operationId="createUser",
      *     summary="Crear usuario",
-     *     description="Crea un usuario y le asigna un rol principal. Uso administrativo.",
+     *     description="Crea un usuario, asigna su rol principal y permite subir una foto de perfil.",
      *     tags={"Users"},
      *     security={{"bearerAuth":{}}},
      *
      *     @OA\RequestBody(
      *         required=true,
      *
-     *         @OA\JsonContent(
-     *             required={
-     *                 "name",
-     *                 "last_name",
-     *                 "email",
-     *                 "password",
-     *                 "password_confirmation",
-     *                 "role"
-     *             },
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
      *
-     *             @OA\Property(
-     *                 property="name",
-     *                 type="string",
-     *                 example="Juan"
-     *             ),
+     *             @OA\Schema(
+     *                 required={
+     *                     "name",
+     *                     "last_name",
+     *                     "email",
+     *                     "password",
+     *                     "password_confirmation",
+     *                     "role"
+     *                 },
      *
-     *             @OA\Property(
-     *                 property="last_name",
-     *                 type="string",
-     *                 example="Pérez"
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="maternal_last_name",
-     *                 type="string",
-     *                 nullable=true,
-     *                 example="López"
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="email",
-     *                 type="string",
-     *                 format="email",
-     *                 example="juan@example.com"
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="password",
-     *                 type="string",
-     *                 example="password123"
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="password_confirmation",
-     *                 type="string",
-     *                 example="password123"
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="role",
-     *                 type="string",
-     *                 enum={"cliente","freelancer","empresa"},
-     *                 example="cliente"
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="phone",
-     *                 type="string",
-     *                 nullable=true,
-     *                 example="7712233445"
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="profile_photo",
-     *                 type="string",
-     *                 nullable=true
-     *             ),
-     *
-     *             @OA\Property(
-     *                 property="is_active",
-     *                 type="boolean",
-     *                 example=true
+     *                 @OA\Property(
+     *                     property="name",
+     *                     type="string",
+     *                     example="Juan"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="last_name",
+     *                     type="string",
+     *                     example="Pérez"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="maternal_last_name",
+     *                     type="string",
+     *                     nullable=true,
+     *                     example="López"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="email",
+     *                     type="string",
+     *                     format="email",
+     *                     example="juan@example.com"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="phone",
+     *                     type="string",
+     *                     nullable=true,
+     *                     example="7712233445"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="password",
+     *                     type="string",
+     *                     format="password",
+     *                     example="password123"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="password_confirmation",
+     *                     type="string",
+     *                     format="password",
+     *                     example="password123"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="role",
+     *                     type="string",
+     *                     enum={"cliente","freelancer","empresa"},
+     *                     example="cliente"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="profile_photo",
+     *                     type="string",
+     *                     format="binary",
+     *                     nullable=true,
+     *                     description="Imagen JPG, JPEG, PNG o WEBP. Tamaño máximo: 2 MB."
+     *                 ),
+     *                 @OA\Property(
+     *                     property="is_active",
+     *                     type="boolean",
+     *                     example=true
+     *                 )
      *             )
      *         )
      *     ),
@@ -525,20 +673,24 @@ class UserController extends Controller
      *         response=201,
      *         description="Usuario creado exitosamente"
      *     ),
-     *
      *     @OA\Response(
      *         response=403,
      *         description="Sin permisos"
      *     ),
-     *
      *     @OA\Response(
      *         response=422,
      *         description="Datos inválidos"
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor"
      *     )
      * )
      */
     public function store(Request $request)
     {
+        $photoPath = null;
+
         $validated = $request->validate([
             'name' => [
                 'required',
@@ -562,7 +714,8 @@ class UserController extends Controller
                 'required',
                 'email',
                 'max:150',
-                'unique:users,email',
+                Rule::unique('users', 'email')
+                    ->whereNull('deleted_at'),
             ],
 
             'password' => [
@@ -590,8 +743,9 @@ class UserController extends Controller
 
             'profile_photo' => [
                 'nullable',
-                'string',
-                'max:255',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:2048',
             ],
 
             'is_active' => [
@@ -600,45 +754,74 @@ class UserController extends Controller
             ],
         ]);
 
-        $user = DB::transaction(function () use ($validated) {
-            $role = Role::where(
-                'name',
-                $validated['role']
-            )->firstOrFail();
+        if ($request->hasFile('profile_photo')) {
+            $photoPath = $request
+                ->file('profile_photo')
+                ->store('profile_photos', 'public');
+        }
 
-            $user = User::create([
-                'name' => $validated['name'],
-                'last_name' => $validated['last_name'],
-                'maternal_last_name' =>
+        try {
+            $user = DB::transaction(function () use (
+                $validated,
+                $photoPath
+            ) {
+                $role = Role::where(
+                    'name',
+                    $validated['role']
+                )->first();
+
+                if (! $role) {
+                    throw new \Exception(
+                        'El rol seleccionado no existe.'
+                    );
+                }
+
+                $user = User::create([
+                    'name' => $validated['name'],
+                    'last_name' => $validated['last_name'],
+                    'maternal_last_name' =>
                     $validated['maternal_last_name'] ?? null,
-                'email' => $validated['email'],
-                'password' => Hash::make(
-                    $validated['password']
-                ),
-                'phone' => $validated['phone'] ?? null,
-                'profile_photo' =>
-                    $validated['profile_photo'] ?? null,
-                'is_active' =>
+                    'email' => $validated['email'],
+                    'password' => Hash::make(
+                        $validated['password']
+                    ),
+                    'phone' => $validated['phone'] ?? null,
+                    'profile_photo' => $photoPath,
+                    'is_active' =>
                     $validated['is_active'] ?? true,
-            ]);
+                ]);
 
-            $user->roles()->sync([
-                $role->id => [
-                    'assigned_at' => now(),
-                ],
-            ]);
+                $user->roles()->sync([
+                    $role->id => [
+                        'assigned_at' => now(),
+                    ],
+                ]);
 
-            ActivityLoggerService::logCreate(
-                module: 'USERS',
-                entity: 'users',
-                entityId: $user->id,
-                description: "User {$user->name} {$user->last_name} created with role {$role->name}"
-            );
+                ActivityLoggerService::logCreate(
+                    module: 'USERS',
+                    entity: 'users',
+                    entityId: $user->id,
+                    description: "User {$user->name} {$user->last_name} created with role {$role->name}"
+                );
 
-            $user->load('roles');
+                $user->load('roles');
 
-            return $user;
-        });
+                return $user;
+            });
+        } catch (\Throwable $exception) {
+            if (
+                $photoPath
+                && Storage::disk('public')->exists($photoPath)
+            ) {
+                Storage::disk('public')->delete($photoPath);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo crear el usuario.',
+                'error' => $exception->getMessage(),
+            ], 500);
+        }
 
         return response()->json([
             'success' => true,
@@ -662,7 +845,6 @@ class UserController extends Controller
      *         response=200,
      *         description="Usuarios obtenidos exitosamente"
      *     ),
-     *
      *     @OA\Response(
      *         response=403,
      *         description="Sin permisos"
@@ -675,8 +857,8 @@ class UserController extends Controller
             ->latest('created_at')
             ->get()
             ->map(
-                fn (User $user) =>
-                    $this->formatUserResponse($user)
+                fn(User $user) =>
+                $this->formatUserResponse($user)
             )
             ->values();
 
@@ -709,7 +891,6 @@ class UserController extends Controller
      *         response=200,
      *         description="Usuario obtenido exitosamente"
      *     ),
-     *
      *     @OA\Response(
      *         response=404,
      *         description="Usuario no encontrado"
@@ -737,10 +918,11 @@ class UserController extends Controller
     }
 
     /**
-     * @OA\Put(
+     * @OA\Patch(
      *     path="/api/users/{id}",
      *     operationId="updateUser",
      *     summary="Actualizar usuario como administrador",
+     *     description="Actualiza los datos administrativos de un usuario. La fotografía se administra desde el endpoint personal de fotografía.",
      *     tags={"Users"},
      *     security={{"bearerAuth":{}}},
      *
@@ -761,55 +943,41 @@ class UserController extends Controller
      *                 type="string",
      *                 example="Juan"
      *             ),
-     *
      *             @OA\Property(
      *                 property="last_name",
      *                 type="string",
      *                 example="Pérez"
      *             ),
-     *
      *             @OA\Property(
      *                 property="maternal_last_name",
      *                 type="string",
      *                 nullable=true
      *             ),
-     *
      *             @OA\Property(
      *                 property="email",
      *                 type="string",
      *                 format="email"
      *             ),
-     *
      *             @OA\Property(
      *                 property="password",
      *                 type="string",
      *                 nullable=true
      *             ),
-     *
      *             @OA\Property(
      *                 property="password_confirmation",
      *                 type="string",
      *                 nullable=true
      *             ),
-     *
      *             @OA\Property(
      *                 property="role",
      *                 type="string",
      *                 enum={"cliente","freelancer","empresa"}
      *             ),
-     *
      *             @OA\Property(
      *                 property="phone",
      *                 type="string",
      *                 nullable=true
      *             ),
-     *
-     *             @OA\Property(
-     *                 property="profile_photo",
-     *                 type="string",
-     *                 nullable=true
-     *             ),
-     *
      *             @OA\Property(
      *                 property="is_active",
      *                 type="boolean"
@@ -821,12 +989,10 @@ class UserController extends Controller
      *         response=200,
      *         description="Usuario actualizado exitosamente"
      *     ),
-     *
      *     @OA\Response(
      *         response=404,
      *         description="Usuario no encontrado"
      *     ),
-     *
      *     @OA\Response(
      *         response=422,
      *         description="Datos inválidos"
@@ -872,6 +1038,7 @@ class UserController extends Controller
                 'email',
                 'max:150',
                 Rule::unique('users', 'email')
+                    ->whereNull('deleted_at')
                     ->ignore($user->id),
             ],
 
@@ -901,13 +1068,6 @@ class UserController extends Controller
                 'max:20',
             ],
 
-            'profile_photo' => [
-                'sometimes',
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
             'is_active' => [
                 'sometimes',
                 'boolean',
@@ -917,15 +1077,16 @@ class UserController extends Controller
         DB::transaction(function () use ($user, $validated) {
             $data = [];
 
-            foreach ([
-                'name',
-                'last_name',
-                'maternal_last_name',
-                'email',
-                'phone',
-                'profile_photo',
-                'is_active',
-            ] as $field) {
+            foreach (
+                [
+                    'name',
+                    'last_name',
+                    'maternal_last_name',
+                    'email',
+                    'phone',
+                    'is_active',
+                ] as $field
+            ) {
                 if (array_key_exists($field, $validated)) {
                     $data[$field] = $validated[$field];
                 }
@@ -994,12 +1155,10 @@ class UserController extends Controller
      *         response=200,
      *         description="Usuario eliminado exitosamente"
      *     ),
-     *
      *     @OA\Response(
      *         response=404,
      *         description="Usuario no encontrado"
      *     ),
-     *
      *     @OA\Response(
      *         response=410,
      *         description="Usuario ya eliminado"

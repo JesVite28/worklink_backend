@@ -2437,12 +2437,58 @@
             }
         },
         "/api/users/me": {
-            "put": {
+            "delete": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Eliminar mi cuenta",
+                "description": "Permite al usuario autenticado eliminar su propia cuenta confirmando su contraseña.",
+                "operationId": "deleteMyUserAccount",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "password"
+                                ],
+                                "properties": {
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cuenta eliminada exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado"
+                    },
+                    "403": {
+                        "description": "Operación no permitida"
+                    },
+                    "422": {
+                        "description": "Datos inválidos"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
                 "tags": [
                     "Users"
                 ],
                 "summary": "Actualizar mi cuenta",
-                "description": "Permite al usuario autenticado actualizar únicamente sus propios datos personales.",
+                "description": "Permite al usuario autenticado actualizar sus propios datos personales. La fotografía se modifica desde /api/users/me/profile-photo.",
                 "operationId": "updateMyUserAccount",
                 "requestBody": {
                     "required": true,
@@ -2471,11 +2517,6 @@
                                     "phone": {
                                         "type": "string",
                                         "example": "7711234567",
-                                        "nullable": true
-                                    },
-                                    "profile_photo": {
-                                        "type": "string",
-                                        "example": "https://example.com/profile.jpg",
                                         "nullable": true
                                     },
                                     "current_password": {
@@ -2516,26 +2557,29 @@
                         "bearerAuth": []
                     }
                 ]
-            },
-            "delete": {
+            }
+        },
+        "/api/users/me/profile-photo": {
+            "post": {
                 "tags": [
                     "Users"
                 ],
-                "summary": "Eliminar mi cuenta",
-                "description": "Permite al usuario autenticado eliminar su propia cuenta confirmando su contraseña.",
-                "operationId": "deleteMyUserAccount",
+                "summary": "Actualizar mi foto de perfil",
+                "description": "Sube o reemplaza la foto del usuario autenticado.",
+                "operationId": "updateMyProfilePhoto",
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "required": [
-                                    "password"
+                                    "profile_photo"
                                 ],
                                 "properties": {
-                                    "password": {
+                                    "profile_photo": {
+                                        "description": "Imagen JPG, JPEG, PNG o WEBP. Tamaño máximo: 2 MB.",
                                         "type": "string",
-                                        "example": "password123"
+                                        "format": "binary"
                                     }
                                 },
                                 "type": "object"
@@ -2545,16 +2589,37 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Cuenta eliminada exitosamente"
+                        "description": "Foto de perfil actualizada exitosamente"
                     },
                     "401": {
                         "description": "No autorizado"
                     },
-                    "403": {
-                        "description": "Contraseña incorrecta"
-                    },
                     "422": {
-                        "description": "Datos inválidos"
+                        "description": "Archivo inválido"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Eliminar mi foto de perfil",
+                "description": "Elimina la foto de perfil del usuario autenticado.",
+                "operationId": "deleteMyProfilePhoto",
+                "responses": {
+                    "200": {
+                        "description": "Foto de perfil eliminada exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado"
+                    },
+                    "404": {
+                        "description": "El usuario no tiene una foto de perfil"
                     }
                 },
                 "security": [
@@ -2591,12 +2656,12 @@
                     "Users"
                 ],
                 "summary": "Crear usuario",
-                "description": "Crea un usuario y le asigna un rol principal. Uso administrativo.",
+                "description": "Crea un usuario, asigna su rol principal y permite subir una foto de perfil.",
                 "operationId": "createUser",
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "required": [
                                     "name",
@@ -2625,12 +2690,19 @@
                                         "format": "email",
                                         "example": "juan@example.com"
                                     },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "7712233445",
+                                        "nullable": true
+                                    },
                                     "password": {
                                         "type": "string",
+                                        "format": "password",
                                         "example": "password123"
                                     },
                                     "password_confirmation": {
                                         "type": "string",
+                                        "format": "password",
                                         "example": "password123"
                                     },
                                     "role": {
@@ -2642,13 +2714,10 @@
                                         ],
                                         "example": "cliente"
                                     },
-                                    "phone": {
-                                        "type": "string",
-                                        "example": "7712233445",
-                                        "nullable": true
-                                    },
                                     "profile_photo": {
+                                        "description": "Imagen JPG, JPEG, PNG o WEBP. Tamaño máximo: 2 MB.",
                                         "type": "string",
+                                        "format": "binary",
                                         "nullable": true
                                     },
                                     "is_active": {
@@ -2670,6 +2739,9 @@
                     },
                     "422": {
                         "description": "Datos inválidos"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
                     }
                 },
                 "security": [
@@ -2712,11 +2784,47 @@
                     }
                 ]
             },
-            "put": {
+            "delete": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Eliminar usuario como administrador",
+                "operationId": "deleteUser",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del usuario",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Usuario eliminado exitosamente"
+                    },
+                    "404": {
+                        "description": "Usuario no encontrado"
+                    },
+                    "410": {
+                        "description": "Usuario ya eliminado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
                 "tags": [
                     "Users"
                 ],
                 "summary": "Actualizar usuario como administrador",
+                "description": "Actualiza los datos administrativos de un usuario. La fotografía se administra desde el endpoint personal de fotografía.",
                 "operationId": "updateUser",
                 "parameters": [
                     {
@@ -2772,10 +2880,6 @@
                                         "type": "string",
                                         "nullable": true
                                     },
-                                    "profile_photo": {
-                                        "type": "string",
-                                        "nullable": true
-                                    },
                                     "is_active": {
                                         "type": "boolean"
                                     }
@@ -2794,41 +2898,6 @@
                     },
                     "422": {
                         "description": "Datos inválidos"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Eliminar usuario como administrador",
-                "operationId": "deleteUser",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID del usuario",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "example": 1
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Usuario eliminado exitosamente"
-                    },
-                    "404": {
-                        "description": "Usuario no encontrado"
-                    },
-                    "410": {
-                        "description": "Usuario ya eliminado"
                     }
                 },
                 "security": [
