@@ -904,12 +904,12 @@ class BriefcaseController extends Controller
     }
 
     /**
-     * @OA\Post(
-     *     path="/api/briefcases/{id}/update",
-     *     operationId="updateBriefcaseWithImage",
+     * @OA\Put(
+     *     path="/api/briefcases/{id}",
+    *     operationId="updateBriefcase",
      *     tags={"Briefcases"},
      *     summary="Actualizar proyecto de portafolio",
-     *     description="Actualiza los datos y permite reemplazar o eliminar la imagen mediante multipart/form-data.",
+    *     description="Actualiza datos del proyecto (título, descripción y enlace).",
      *     security={{"bearerAuth":{}}},
      *
      *     @OA\Parameter(
@@ -919,13 +919,10 @@ class BriefcaseController extends Controller
      *         @OA\Schema(type="integer", example=1)
      *     ),
      *
-     *     @OA\RequestBody(
-     *         required=true,
-     *
-     *         @OA\MediaType(
-     *             mediaType="multipart/form-data",
-     *
-     *             @OA\Schema(
+    *     @OA\RequestBody(
+    *         required=true,
+    *
+    *         @OA\JsonContent(
      *                 @OA\Property(
      *                     property="title",
      *                     type="string",
@@ -940,29 +937,19 @@ class BriefcaseController extends Controller
      *                 ),
      *
      *                 @OA\Property(
-     *                     property="image_url",
-     *                     type="string",
-     *                     format="binary",
-     *                     nullable=true,
-     *                     description="Nueva imagen opcional. Reemplaza la imagen anterior."
-     *                 ),
-     *
-     *                 @OA\Property(
-     *                     property="remove_image",
-     *                     type="boolean",
-     *                     nullable=true,
-     *                     example=false,
-     *                     description="Enviar true para eliminar la imagen actual sin subir otra."
-     *                 ),
-     *
-     *                 @OA\Property(
      *                     property="project_url",
      *                     type="string",
      *                     nullable=true,
      *                     example="https://github.com/usuario/repositorio-actualizado"
+     *                 ),
+     *
+     *                 @OA\Property(
+     *                     property="project_link",
+     *                     type="string",
+     *                     nullable=true,
+     *                     example="https://github.com/usuario/repositorio-actualizado"
      *                 )
-     *             )
-     *         )
+    *             )
      *     ),
      *
      *     @OA\Response(
@@ -991,6 +978,33 @@ class BriefcaseController extends Controller
         Request $request,
         int $id
     ) {
+        if (
+            ! $request->has('project_url')
+            && $request->filled('project_link')
+        ) {
+            $request->merge([
+                'project_url' => $request->input('project_link'),
+            ]);
+        }
+
+        if (
+            ! $request->has('project_url')
+            && $request->filled('url_proyecto')
+        ) {
+            $request->merge([
+                'project_url' => $request->input('url_proyecto'),
+            ]);
+        }
+
+        if (
+            $request->has('project_url')
+            && $request->input('project_url') === ''
+        ) {
+            $request->merge([
+                'project_url' => null,
+            ]);
+        }
+
         $briefcase = Briefcase::with(
             'freelancerProfile'
         )->find($id);
@@ -1024,35 +1038,27 @@ class BriefcaseController extends Controller
                 'max:3000',
             ],
 
-            'image_url' => [
-                'sometimes',
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:2048',
-            ],
-
-            'remove_image' => [
-                'sometimes',
-                'boolean',
-            ],
-
             'project_url' => [
                 'sometimes',
                 'nullable',
                 'url',
                 'max:255',
             ],
+
+            'project_link' => [
+                'sometimes',
+                'nullable',
+                'url',
+                'max:255',
+            ],
+
+            'url_proyecto' => [
+                'sometimes',
+                'nullable',
+                'url',
+                'max:255',
+            ],
         ]);
-
-        $oldImagePath = $briefcase->image_url;
-        $newImagePath = null;
-
-        if ($request->hasFile('image_url')) {
-            $newImagePath = $request
-                ->file('image_url')
-                ->store('briefcase_images', 'public');
-        }
 
         $data = [];
 
@@ -1066,12 +1072,25 @@ class BriefcaseController extends Controller
             }
         }
 
-        if ($newImagePath) {
-            $data['image_url'] = $newImagePath;
-        } elseif (
-            ($validated['remove_image'] ?? false) === true
+        if (
+            ! array_key_exists('project_url', $data)
+            && array_key_exists('project_link', $validated)
         ) {
-            $data['image_url'] = null;
+            $data['project_url'] = $validated['project_link'];
+        }
+
+        if (
+            ! array_key_exists('project_url', $data)
+            && array_key_exists('url_proyecto', $validated)
+        ) {
+            $data['project_url'] = $validated['url_proyecto'];
+        }
+
+        if (empty($data)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se enviaron cambios para actualizar.',
+            ], 422);
         }
 
         try {
@@ -1091,35 +1110,11 @@ class BriefcaseController extends Controller
                 );
             });
         } catch (\Throwable $exception) {
-            if (
-                $newImagePath
-                && Storage::disk('public')->exists($newImagePath)
-            ) {
-                Storage::disk('public')->delete($newImagePath);
-            }
-
             return response()->json([
                 'success' => false,
                 'message' => 'No se pudo actualizar el proyecto de portafolio.',
                 'error' => $exception->getMessage(),
             ], 500);
-        }
-
-        $imageWasReplaced = $newImagePath !== null;
-        $imageWasRemoved =
-            ($validated['remove_image'] ?? false) === true
-            && $newImagePath === null;
-
-        if (
-            $oldImagePath
-            && ($imageWasReplaced || $imageWasRemoved)
-            && ! filter_var(
-                $oldImagePath,
-                FILTER_VALIDATE_URL
-            )
-            && Storage::disk('public')->exists($oldImagePath)
-        ) {
-            Storage::disk('public')->delete($oldImagePath);
         }
 
         $briefcase->refresh();
@@ -1131,6 +1126,255 @@ class BriefcaseController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Proyecto actualizado correctamente',
+            'data' => [
+                'briefcase' =>
+                    $this->formatBriefcaseResponse(
+                        $briefcase
+                    ),
+            ],
+        ]);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/briefcases/{id}/image",
+     *     operationId="updateBriefcaseImage",
+     *     tags={"Briefcases"},
+     *     summary="Actualizar imagen de proyecto de portafolio",
+     *     description="Actualiza solo la imagen del proyecto mediante multipart/form-data.",
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *
+     *             @OA\Schema(
+     *                 required={"image_url"},
+     *
+     *                 @OA\Property(
+     *                     property="image_url",
+     *                     type="string",
+     *                     format="binary",
+     *                     description="Imagen JPG, JPEG, PNG o WEBP. Tamaño máximo: 2 MB."
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Imagen actualizada correctamente"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Sin permisos"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Proyecto no encontrado"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Archivo inválido"
+     *     )
+     * )
+     */
+    public function updateImage(
+        Request $request,
+        int $id
+    ) {
+        $briefcase = Briefcase::with(
+            'freelancerProfile'
+        )->find($id);
+
+        if (! $briefcase) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Proyecto no encontrado.',
+            ], 404);
+        }
+
+        if (! $this->canManageBriefcase($briefcase)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para actualizar este proyecto.',
+            ], 403);
+        }
+
+        $request->validate([
+            'image_url' => [
+                'required',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:2048',
+            ],
+        ]);
+
+        $oldImagePath = $briefcase->image_url;
+
+        $newImagePath = $request
+            ->file('image_url')
+            ->store('briefcase_images', 'public');
+
+        try {
+            DB::transaction(function () use (
+                $briefcase,
+                $newImagePath
+            ) {
+                $briefcase->update([
+                    'image_url' => $newImagePath,
+                ]);
+
+                ActivityLoggerService::logUpdate(
+                    module: 'BRIEFCASES',
+                    entity: 'briefcases',
+                    entityId: $briefcase->id,
+                    description: "Briefcase project {$briefcase->title} image updated"
+                );
+            });
+        } catch (\Throwable $exception) {
+            if (Storage::disk('public')->exists($newImagePath)) {
+                Storage::disk('public')->delete($newImagePath);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo actualizar la imagen del proyecto.',
+                'error' => $exception->getMessage(),
+            ], 500);
+        }
+
+        if (
+            $oldImagePath
+            && $oldImagePath !== $newImagePath
+            && ! filter_var(
+                $oldImagePath,
+                FILTER_VALIDATE_URL
+            )
+            && Storage::disk('public')->exists($oldImagePath)
+        ) {
+            Storage::disk('public')->delete($oldImagePath);
+        }
+
+        $briefcase->refresh();
+        $briefcase->load('freelancerProfile.user.roles');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Imagen del proyecto actualizada correctamente.',
+            'data' => [
+                'briefcase' =>
+                    $this->formatBriefcaseResponse(
+                        $briefcase
+                    ),
+            ],
+        ]);
+    }
+
+    /**
+     * @OA\Delete(
+     *     path="/api/briefcases/{id}/image",
+     *     operationId="deleteBriefcaseImage",
+     *     tags={"Briefcases"},
+     *     summary="Eliminar imagen de proyecto de portafolio",
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Imagen eliminada correctamente"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Sin permisos"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Proyecto no encontrado o sin imagen"
+     *     )
+     * )
+     */
+    public function destroyImage(int $id)
+    {
+        $briefcase = Briefcase::with(
+            'freelancerProfile'
+        )->find($id);
+
+        if (! $briefcase) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Proyecto no encontrado.',
+            ], 404);
+        }
+
+        if (! $this->canManageBriefcase($briefcase)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para actualizar este proyecto.',
+            ], 403);
+        }
+
+        if (! $briefcase->image_url) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este proyecto no tiene imagen para eliminar.',
+            ], 404);
+        }
+
+        $oldImagePath = $briefcase->image_url;
+
+        try {
+            DB::transaction(function () use ($briefcase) {
+                $briefcase->update([
+                    'image_url' => null,
+                ]);
+
+                ActivityLoggerService::logUpdate(
+                    module: 'BRIEFCASES',
+                    entity: 'briefcases',
+                    entityId: $briefcase->id,
+                    description: "Briefcase project {$briefcase->title} image removed"
+                );
+            });
+        } catch (\Throwable $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo eliminar la imagen del proyecto.',
+                'error' => $exception->getMessage(),
+            ], 500);
+        }
+
+        if (
+            ! filter_var(
+                $oldImagePath,
+                FILTER_VALIDATE_URL
+            )
+            && Storage::disk('public')->exists($oldImagePath)
+        ) {
+            Storage::disk('public')->delete($oldImagePath);
+        }
+
+        $briefcase->refresh();
+        $briefcase->load('freelancerProfile.user.roles');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Imagen del proyecto eliminada correctamente.',
             'data' => [
                 'briefcase' =>
                     $this->formatBriefcaseResponse(

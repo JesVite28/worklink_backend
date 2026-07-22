@@ -12,6 +12,7 @@ use App\Http\Controllers\BriefcaseController;
 use App\Http\Controllers\AvailabilityController;
 use App\Http\Controllers\ContractRequestController;
 use App\Http\Controllers\ContractController;
+use App\Http\Controllers\LegalDocumentController;
 use App\Http\Controllers\Api\ChatBotController;
 
 
@@ -42,6 +43,22 @@ Route::post(
 */
 
 Route::prefix('public')->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Public Legal Documents
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/legal/terms-and-conditions',
+        [LegalDocumentController::class, 'publicTermsAndConditions']
+    );
+
+    Route::get(
+        '/legal/terms-and-conditions/pdf',
+        [LegalDocumentController::class, 'publicTermsAndConditionsPdf']
+    );
 
     /*
     |--------------------------------------------------------------------------
@@ -348,6 +365,11 @@ Route::middleware('auth.api')->group(function () {
     );
 
     Route::get(
+        '/services/freelancer/{freelancerId}',
+        [ServiceController::class, 'byFreelancer']
+    )->whereNumber('freelancerId');
+
+    Route::get(
         '/services/{id}',
         [ServiceController::class, 'show']
     )->whereNumber('id');
@@ -405,6 +427,11 @@ Route::middleware('auth.api')->group(function () {
         [BriefcaseController::class, 'show']
     )->whereNumber('id');
 
+    Route::post(
+        '/briefcases/{id}/update',
+        [BriefcaseController::class, 'update']
+    )->whereNumber('id');
+
     Route::put(
         '/briefcases/{id}',
         [BriefcaseController::class, 'update']
@@ -413,6 +440,16 @@ Route::middleware('auth.api')->group(function () {
     Route::patch(
         '/briefcases/{id}',
         [BriefcaseController::class, 'update']
+    )->whereNumber('id');
+
+    Route::post(
+        '/briefcases/{id}/image',
+        [BriefcaseController::class, 'updateImage']
+    )->whereNumber('id');
+
+    Route::delete(
+        '/briefcases/{id}/image',
+        [BriefcaseController::class, 'destroyImage']
     )->whereNumber('id');
 
     Route::delete(
