@@ -975,6 +975,78 @@
                     }
                 ]
             },
+            "put": {
+                "tags": [
+                    "Briefcases"
+                ],
+                "summary": "Actualizar proyecto de portafolio",
+                "description": "Actualiza datos del proyecto (título, descripción y enlace).",
+                "operationId": "updateBriefcase",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "E-commerce actualizado"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Descripción actualizada del proyecto",
+                                        "nullable": true
+                                    },
+                                    "project_url": {
+                                        "type": "string",
+                                        "example": "https://github.com/usuario/repositorio-actualizado",
+                                        "nullable": true
+                                    },
+                                    "project_link": {
+                                        "type": "string",
+                                        "example": "https://github.com/usuario/repositorio-actualizado",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Proyecto actualizado correctamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Proyecto no encontrado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
             "delete": {
                 "tags": [
                     "Briefcases"
@@ -1010,14 +1082,14 @@
                 ]
             }
         },
-        "/api/briefcases/{id}/update": {
+        "/api/briefcases/{id}/image": {
             "post": {
                 "tags": [
                     "Briefcases"
                 ],
-                "summary": "Actualizar proyecto de portafolio",
-                "description": "Actualiza los datos y permite reemplazar o eliminar la imagen mediante multipart/form-data.",
-                "operationId": "updateBriefcaseWithImage",
+                "summary": "Actualizar imagen de proyecto de portafolio",
+                "description": "Actualiza solo la imagen del proyecto mediante multipart/form-data.",
+                "operationId": "updateBriefcaseImage",
                 "parameters": [
                     {
                         "name": "id",
@@ -1034,32 +1106,14 @@
                     "content": {
                         "multipart/form-data": {
                             "schema": {
+                                "required": [
+                                    "image_url"
+                                ],
                                 "properties": {
-                                    "title": {
-                                        "type": "string",
-                                        "example": "E-commerce actualizado"
-                                    },
-                                    "description": {
-                                        "type": "string",
-                                        "example": "Descripción actualizada del proyecto",
-                                        "nullable": true
-                                    },
                                     "image_url": {
-                                        "description": "Nueva imagen opcional. Reemplaza la imagen anterior.",
+                                        "description": "Imagen JPG, JPEG, PNG o WEBP. Tamaño máximo: 2 MB.",
                                         "type": "string",
-                                        "format": "binary",
-                                        "nullable": true
-                                    },
-                                    "remove_image": {
-                                        "description": "Enviar true para eliminar la imagen actual sin subir otra.",
-                                        "type": "boolean",
-                                        "example": false,
-                                        "nullable": true
-                                    },
-                                    "project_url": {
-                                        "type": "string",
-                                        "example": "https://github.com/usuario/repositorio-actualizado",
-                                        "nullable": true
+                                        "format": "binary"
                                     }
                                 },
                                 "type": "object"
@@ -1069,7 +1123,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Proyecto actualizado correctamente"
+                        "description": "Imagen actualizada correctamente"
                     },
                     "403": {
                         "description": "Sin permisos"
@@ -1078,10 +1132,41 @@
                         "description": "Proyecto no encontrado"
                     },
                     "422": {
-                        "description": "Error de validación"
+                        "description": "Archivo inválido"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Briefcases"
+                ],
+                "summary": "Eliminar imagen de proyecto de portafolio",
+                "operationId": "deleteBriefcaseImage",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Imagen eliminada correctamente"
                     },
-                    "500": {
-                        "description": "Error interno del servidor"
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Proyecto no encontrado o sin imagen"
                     }
                 },
                 "security": [
@@ -1948,6 +2033,42 @@
                 ]
             }
         },
+        "/api/public/legal/terms-and-conditions": {
+            "get": {
+                "tags": [
+                    "Legal Documents"
+                ],
+                "summary": "Obtener Términos y Condiciones",
+                "description": "Retorna el contenido de Términos y Condiciones almacenado en el backend.",
+                "operationId": "publicTermsAndConditions",
+                "responses": {
+                    "200": {
+                        "description": "Documento obtenido exitosamente"
+                    },
+                    "404": {
+                        "description": "Documento no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/public/legal/terms-and-conditions/pdf": {
+            "get": {
+                "tags": [
+                    "Legal Documents"
+                ],
+                "summary": "Obtener Términos y Condiciones en PDF",
+                "description": "Retorna el archivo PDF de Términos y Condiciones.",
+                "operationId": "publicTermsAndConditionsPdf",
+                "responses": {
+                    "200": {
+                        "description": "PDF obtenido exitosamente"
+                    },
+                    "404": {
+                        "description": "PDF no encontrado"
+                    }
+                }
+            }
+        },
         "/api/roles": {
             "get": {
                 "tags": [
@@ -2304,6 +2425,44 @@
                     },
                     "422": {
                         "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/services/freelancer/{freelancerId}": {
+            "get": {
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Obtener servicios privados por ID de freelancer",
+                "description": "Solo puede consultarlo el propietario del perfil o un administrador.",
+                "operationId": "privateServicesByFreelancer",
+                "parameters": [
+                    {
+                        "name": "freelancerId",
+                        "in": "path",
+                        "description": "ID del perfil freelancer",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Servicios obtenidos exitosamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Perfil freelancer no encontrado"
                     }
                 },
                 "security": [
@@ -2981,6 +3140,10 @@
         {
             "name": "Freelancer Profiles",
             "description": "Endpoints para la gestión de perfiles de freelancers"
+        },
+        {
+            "name": "Legal Documents",
+            "description": "Endpoints públicos para documentos legales"
         },
         {
             "name": "Services",

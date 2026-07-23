@@ -346,6 +346,91 @@ class ServiceController extends Controller
     }
 
     /**
+     * @OA\Get(
+     *     path="/api/services/freelancer/{freelancerId}",
+     *     operationId="privateServicesByFreelancer",
+     *     tags={"Services"},
+     *     summary="Obtener servicios privados por ID de freelancer",
+     *     description="Solo puede consultarlo el propietario del perfil o un administrador.",
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="freelancerId",
+     *         in="path",
+     *         required=true,
+     *         description="ID del perfil freelancer",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Servicios obtenidos exitosamente"
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Sin permisos"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Perfil freelancer no encontrado"
+     *     )
+     * )
+     */
+    public function byFreelancer(int $freelancerId)
+    {
+        $authUser = auth('api')->user();
+
+        if (! $authUser) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado.',
+            ], 401);
+        }
+
+        $profile = FreelancerProfile::with('user.roles')
+            ->find($freelancerId);
+
+        if (! $profile) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Perfil freelancer no encontrado.',
+            ], 404);
+        }
+
+        $isOwner = $profile->user_id === $authUser->id;
+
+        if (! $authUser->hasRole('admin') && ! $isOwner) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para consultar estos servicios.',
+            ], 403);
+        }
+
+        $services = Service::query()
+            ->with('freelancerProfile.user.roles')
+            ->where('freelancer_id', $profile->id)
+            ->latest('created_at')
+            ->get()
+            ->map(
+                fn (Service $service) =>
+                    $this->formatServiceResponse($service)
+            )
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Servicios del freelancer obtenidos exitosamente',
+            'data' => [
+                'freelancer_profile' =>
+                    $this->formatFreelancerProfileResponse(
+                        $profile
+                    ),
+                'services' => $services,
+            ],
+        ]);
+    }
+
+    /**
      * @OA\Post(
      *     path="/api/services",
      *     operationId="createService",
