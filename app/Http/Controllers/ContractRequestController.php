@@ -144,6 +144,23 @@ class ContractRequestController extends Controller
         return $user->hasRole('admin') || $contractRequest->client_id === $user->id;
     }
 
+    private function canViewServiceContractRequests(Service $service): bool
+    {
+        $user = auth('api')->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        $service->loadMissing('freelancerProfile');
+
+        return $user->hasRole('admin')
+            || (
+                $service->freelancerProfile
+                && $service->freelancerProfile->user_id === $user->id
+            );
+    }
+
     /**
      * @OA\Get(
      *     path="/api/contract-requests",
@@ -361,6 +378,66 @@ class ContractRequestController extends Controller
             'message' => 'Solicitud obtenida exitosamente',
             'data' => [
                 'contract_request' => $this->formatContractRequestResponse($contractRequest),
+            ],
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/service/contractRequest/{id}",
+     *     operationId="listContractRequestsByService",
+     *     tags={"Contract Requests"},
+     *     summary="Listar solicitudes por servicio",
+     *     description="Retorna las solicitudes ligadas a un servicio específico.",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID del servicio",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(response=200, description="Solicitudes obtenidas exitosamente"),
+     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido"),
+     *     @OA\Response(response=403, description="Sin permisos"),
+     *     @OA\Response(response=404, description="Servicio no encontrado")
+     * )
+     */
+    public function byService(int $id)
+    {
+        $service = Service::with('freelancerProfile')->find($id);
+
+        if (! $service) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Servicio no encontrado.',
+            ], 404);
+        }
+
+        if (! $this->canViewServiceContractRequests($service)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para ver las solicitudes de este servicio.',
+            ], 403);
+        }
+
+        $requests = $service->contractRequests()
+            ->with([
+                'client.roles',
+                'freelancer.user.roles',
+                'service',
+            ])
+            ->latest('created_at')
+            ->get()
+            ->map(fn (ContractRequest $contractRequest) => $this->formatContractRequestResponse($contractRequest))
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Solicitudes del servicio obtenidas exitosamente',
+            'data' => [
+                'service_id' => $service->id,
+                'contract_requests' => $requests,
             ],
         ]);
     }

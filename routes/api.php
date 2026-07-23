@@ -516,6 +516,11 @@ Route::middleware('auth.api')->group(function () {
         [ContractRequestController::class, 'show']
     )->whereNumber('id');
 
+    Route::get(
+        '/service/contractRequest/{id}',
+        [ContractRequestController::class, 'byService']
+    )->whereNumber('id');
+
     Route::put(
         '/contract-requests/{id}',
         [ContractRequestController::class, 'update']
