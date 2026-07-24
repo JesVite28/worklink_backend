@@ -227,7 +227,6 @@ Route::prefix('public')->group(function () {
         '/reviews/company/{companyId}',
         [ReviewController::class, 'publicByCompany']
     )->whereNumber('companyId');
-
 });
 
 
@@ -899,6 +898,11 @@ Route::middleware('auth.api')->group(function () {
     );
 
     Route::get(
+        '/availabilities/me',
+        [AvailabilityController::class, 'myAvailabilities']
+    );
+
+    Route::get(
         '/applications/{id}',
         [
             ApplicationController::class,
@@ -1058,7 +1062,6 @@ Route::middleware('auth.api')->group(function () {
         '/reports/{id}',
         [ReportController::class, 'destroy']
     )->whereNumber('id');
-
 });
 
 

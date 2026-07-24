@@ -2,14 +2,47 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ContractRequest extends Model
 {
     use HasFactory, SoftDeletes;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Estados
+    |--------------------------------------------------------------------------
+    */
+
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_ACCEPTED = 'accepted';
+
+    public const STATUS_REJECTED = 'rejected';
+
+    public const STATUS_CANCELED = 'canceled';
+
+    public const STATUSES = [
+        self::STATUS_PENDING,
+        self::STATUS_ACCEPTED,
+        self::STATUS_REJECTED,
+        self::STATUS_CANCELED,
+    ];
+
+    public const FINAL_STATUSES = [
+        self::STATUS_ACCEPTED,
+        self::STATUS_REJECTED,
+        self::STATUS_CANCELED,
+    ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Configuración
+    |--------------------------------------------------------------------------
+    */
 
     protected $table = 'contract_requests';
 
@@ -32,27 +65,115 @@ class ContractRequest extends Model
         'deleted_at' => 'datetime',
     ];
 
+    /*
+    |--------------------------------------------------------------------------
+    | Relaciones
+    |--------------------------------------------------------------------------
+    */
+
     /**
-     * User who creates the contract request.
+     * Usuario que envió la solicitud.
      */
     public function client(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'client_id');
+        return $this->belongsTo(
+            User::class,
+            'client_id',
+        );
     }
 
     /**
-     * Freelancer profile that receives the request.
+     * Perfil freelancer que recibe la solicitud.
      */
     public function freelancer(): BelongsTo
     {
-        return $this->belongsTo(FreelancerProfile::class, 'freelancer_id');
+        return $this->belongsTo(
+            FreelancerProfile::class,
+            'freelancer_id',
+        );
     }
 
     /**
-     * Service requested by the client.
+     * Servicio que se desea contratar.
      */
     public function service(): BelongsTo
     {
-        return $this->belongsTo(Service::class, 'service_id');
+        return $this->belongsTo(
+            Service::class,
+            'service_id',
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Comprobaciones de estado
+    |--------------------------------------------------------------------------
+    */
+
+    public function isPending(): bool
+    {
+        return $this->status === self::STATUS_PENDING;
+    }
+
+    public function isAccepted(): bool
+    {
+        return $this->status === self::STATUS_ACCEPTED;
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === self::STATUS_REJECTED;
+    }
+
+    public function isCanceled(): bool
+    {
+        return $this->status === self::STATUS_CANCELED;
+    }
+
+    public function isFinalized(): bool
+    {
+        return in_array(
+            $this->status,
+            self::FINAL_STATUSES,
+            true,
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scopes
+    |--------------------------------------------------------------------------
+    */
+
+    public function scopePending($query)
+    {
+        return $query->where(
+            'status',
+            self::STATUS_PENDING,
+        );
+    }
+
+    public function scopeAccepted($query)
+    {
+        return $query->where(
+            'status',
+            self::STATUS_ACCEPTED,
+        );
+    }
+
+    public function scopeRejected($query)
+    {
+        return $query->where(
+            'status',
+            self::STATUS_REJECTED,
+        );
+    }
+
+    public function scopeCanceled($query)
+    {
+        return $query->where(
+            'status',
+            self::STATUS_CANCELED,
+        );
     }
 }

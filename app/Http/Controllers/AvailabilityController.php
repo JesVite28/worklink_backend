@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
+
+
 /**
  * @OA\Tag(
  *     name="Availabilities",
@@ -134,7 +136,7 @@ class AvailabilityController extends Controller
             ->where('freelancer_id', $freelancerId)
             ->when(
                 $ignoreAvailabilityId,
-                fn ($query) => $query->where('id', '!=', $ignoreAvailabilityId)
+                fn($query) => $query->where('id', '!=', $ignoreAvailabilityId)
             )
             ->where(function ($query) use ($startDate, $endDate) {
                 $query
@@ -173,8 +175,8 @@ class AvailabilityController extends Controller
             ->orderBy('end_date')
             ->get()
             ->map(
-                fn (Availability $availability) =>
-                    $this->formatAvailabilityResponse($availability)
+                fn(Availability $availability) =>
+                $this->formatAvailabilityResponse($availability)
             )
             ->values();
 
@@ -182,6 +184,263 @@ class AvailabilityController extends Controller
             'success' => true,
             'message' => 'Disponibilidades obtenidas exitosamente',
             'data' => [
+                'availabilities' => $availabilities,
+            ],
+        ]);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/availabilities/me",
+     *     operationId="listMyAvailabilities",
+     *     tags={"Availabilities"},
+     *     summary="Obtener mis disponibilidades",
+     *     description="Obtiene todos los periodos de disponibilidad registrados para el perfil freelancer asociado al usuario autenticado.",
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Disponibilidades del freelancer obtenidas exitosamente",
+     *
+     *         @OA\JsonContent(
+     *             @OA\Property(
+     *                 property="success",
+     *                 type="boolean",
+     *                 example=true
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="message",
+     *                 type="string",
+     *                 example="Tus disponibilidades fueron obtenidas exitosamente."
+     *             ),
+     *
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *
+     *                 @OA\Property(
+     *                     property="freelancer_profile",
+     *                     type="object",
+     *                     nullable=true,
+     *
+     *                     @OA\Property(
+     *                         property="id",
+     *                         type="integer",
+     *                         example=1
+     *                     ),
+     *
+     *                     @OA\Property(
+     *                         property="user_id",
+     *                         type="integer",
+     *                         example=5
+     *                     ),
+     *
+     *                     @OA\Property(
+     *                         property="description",
+     *                         type="string",
+     *                         nullable=true,
+     *                         example="Desarrollador web con experiencia en Laravel y React."
+     *                     ),
+     *
+     *                     @OA\Property(
+     *                         property="specialty",
+     *                         type="string",
+     *                         nullable=true,
+     *                         example="Desarrollo web"
+     *                     ),
+     *
+     *                     @OA\Property(
+     *                         property="location",
+     *                         type="string",
+     *                         nullable=true,
+     *                         example="Pachuca, Hidalgo"
+     *                     ),
+     *
+     *                     @OA\Property(
+     *                         property="service_area",
+     *                         type="string",
+     *                         nullable=true,
+     *                         example="México y trabajo remoto"
+     *                     ),
+     *
+     *                     @OA\Property(
+     *                         property="work_mode",
+     *                         type="string",
+     *                         nullable=true,
+     *                         example="remote"
+     *                     ),
+     *
+     *                     @OA\Property(
+     *                         property="experience",
+     *                         type="string",
+     *                         nullable=true,
+     *                         example="3 años de experiencia"
+     *                     ),
+     *
+     *                     @OA\Property(
+     *                         property="rate_type",
+     *                         type="string",
+     *                         nullable=true,
+     *                         example="hourly"
+     *                     ),
+     *
+     *                     @OA\Property(
+     *                         property="rate",
+     *                         type="number",
+     *                         format="float",
+     *                         nullable=true,
+     *                         example=350
+     *                     ),
+     *
+     *                     @OA\Property(
+     *                         property="languages",
+     *                         type="array",
+     *
+     *                         @OA\Items(
+     *                             type="string",
+     *                             example="Español"
+     *                         )
+     *                     ),
+     *
+     *                     @OA\Property(
+     *                         property="available",
+     *                         type="boolean",
+     *                         example=true
+     *                     ),
+     *
+     *                     @OA\Property(
+     *                         property="average_rate",
+     *                         type="number",
+     *                         format="float",
+     *                         nullable=true,
+     *                         example=4.8
+     *                     )
+     *                 ),
+     *
+     *                 @OA\Property(
+     *                     property="availabilities",
+     *                     type="array",
+     *
+     *                     @OA\Items(
+     *                         type="object",
+     *
+     *                         @OA\Property(
+     *                             property="id",
+     *                             type="integer",
+     *                             example=1
+     *                         ),
+     *
+     *                         @OA\Property(
+     *                             property="freelancer_id",
+     *                             type="integer",
+     *                             example=1
+     *                         ),
+     *
+     *                         @OA\Property(
+     *                             property="start_date",
+     *                             type="string",
+     *                             format="date",
+     *                             example="2026-08-01"
+     *                         ),
+     *
+     *                         @OA\Property(
+     *                             property="end_date",
+     *                             type="string",
+     *                             format="date",
+     *                             example="2026-08-15"
+     *                         ),
+     *
+     *                         @OA\Property(
+     *                             property="status",
+     *                             type="string",
+     *                             enum={"available","busy","vacation"},
+     *                             example="available"
+     *                         ),
+     *
+     *                         @OA\Property(
+     *                             property="created_at",
+     *                             type="string",
+     *                             format="date-time",
+     *                             example="2026-07-24T20:30:00.000000Z"
+     *                         ),
+     *
+     *                         @OA\Property(
+     *                             property="updated_at",
+     *                             type="string",
+     *                             format="date-time",
+     *                             example="2026-07-24T20:30:00.000000Z"
+     *                         )
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=401,
+     *         description="Usuario no autenticado"
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=403,
+     *         description="El usuario autenticado no tiene el rol freelancer"
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=404,
+     *         description="Perfil freelancer no encontrado"
+     *     )
+     * )
+     */
+    public function myAvailabilities()
+    {
+        $authUser = auth('api')->user();
+
+        if (! $authUser) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autorizado.',
+            ], 401);
+        }
+
+        if (! $authUser->hasRole('freelancer')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Solo los usuarios freelancer tienen disponibilidad.',
+            ], 403);
+        }
+
+        $profile = FreelancerProfile::with('user.roles')
+            ->where('user_id', $authUser->id)
+            ->first();
+
+        if (! $profile) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se encontró un perfil freelancer para tu cuenta.',
+            ], 404);
+        }
+
+        $availabilities = Availability::query()
+            ->with('freelancerProfile.user.roles')
+            ->where('freelancer_id', $profile->id)
+            ->orderBy('start_date')
+            ->orderBy('end_date')
+            ->get()
+            ->map(
+                fn(Availability $availability) =>
+                $this->formatAvailabilityResponse($availability)
+            )
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tus disponibilidades fueron obtenidas exitosamente.',
+            'data' => [
+                'freelancer_profile' =>
+                $this->formatFreelancerProfileResponse($profile),
+
                 'availabilities' => $availabilities,
             ],
         ]);

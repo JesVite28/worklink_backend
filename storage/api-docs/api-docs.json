@@ -915,6 +915,174 @@
                 ]
             }
         },
+        "/api/availabilities/me": {
+            "get": {
+                "tags": [
+                    "Availabilities"
+                ],
+                "summary": "Obtener mis disponibilidades",
+                "description": "Obtiene todos los periodos de disponibilidad registrados para el perfil freelancer asociado al usuario autenticado.",
+                "operationId": "listMyAvailabilities",
+                "responses": {
+                    "200": {
+                        "description": "Disponibilidades del freelancer obtenidas exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Tus disponibilidades fueron obtenidas exitosamente."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "freelancer_profile": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "user_id": {
+                                                            "type": "integer",
+                                                            "example": 5
+                                                        },
+                                                        "description": {
+                                                            "type": "string",
+                                                            "example": "Desarrollador web con experiencia en Laravel y React.",
+                                                            "nullable": true
+                                                        },
+                                                        "specialty": {
+                                                            "type": "string",
+                                                            "example": "Desarrollo web",
+                                                            "nullable": true
+                                                        },
+                                                        "location": {
+                                                            "type": "string",
+                                                            "example": "Pachuca, Hidalgo",
+                                                            "nullable": true
+                                                        },
+                                                        "service_area": {
+                                                            "type": "string",
+                                                            "example": "México y trabajo remoto",
+                                                            "nullable": true
+                                                        },
+                                                        "work_mode": {
+                                                            "type": "string",
+                                                            "example": "remote",
+                                                            "nullable": true
+                                                        },
+                                                        "experience": {
+                                                            "type": "string",
+                                                            "example": "3 años de experiencia",
+                                                            "nullable": true
+                                                        },
+                                                        "rate_type": {
+                                                            "type": "string",
+                                                            "example": "hourly",
+                                                            "nullable": true
+                                                        },
+                                                        "rate": {
+                                                            "type": "number",
+                                                            "format": "float",
+                                                            "example": 350,
+                                                            "nullable": true
+                                                        },
+                                                        "languages": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "string",
+                                                                "example": "Español"
+                                                            }
+                                                        },
+                                                        "available": {
+                                                            "type": "boolean",
+                                                            "example": true
+                                                        },
+                                                        "average_rate": {
+                                                            "type": "number",
+                                                            "format": "float",
+                                                            "example": 4.8,
+                                                            "nullable": true
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                },
+                                                "availabilities": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "freelancer_id": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "start_date": {
+                                                                "type": "string",
+                                                                "format": "date",
+                                                                "example": "2026-08-01"
+                                                            },
+                                                            "end_date": {
+                                                                "type": "string",
+                                                                "format": "date",
+                                                                "example": "2026-08-15"
+                                                            },
+                                                            "status": {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                    "available",
+                                                                    "busy",
+                                                                    "vacation"
+                                                                ],
+                                                                "example": "available"
+                                                            },
+                                                            "created_at": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "example": "2026-07-24T20:30:00.000000Z"
+                                                            },
+                                                            "updated_at": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "example": "2026-07-24T20:30:00.000000Z"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Usuario no autenticado"
+                    },
+                    "403": {
+                        "description": "El usuario autenticado no tiene el rol freelancer"
+                    },
+                    "404": {
+                        "description": "Perfil freelancer no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/availabilities/{id}": {
             "get": {
                 "tags": [
@@ -2085,14 +2253,69 @@
                     "Contract Requests"
                 ],
                 "summary": "Listar solicitudes de contratación",
-                "description": "Retorna las solicitudes de contratación según el usuario autenticado y su rol.",
+                "description": "Retorna las solicitudes según el rol del usuario autenticado.",
                 "operationId": "listContractRequests",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "accepted",
+                                "rejected",
+                                "canceled"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "service_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "freelancer_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "client_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Solicitudes obtenidas exitosamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
                     }
                 },
                 "security": [
@@ -2106,7 +2329,7 @@
                     "Contract Requests"
                 ],
                 "summary": "Crear solicitud de contratación",
-                "description": "Crea una solicitud para contratar un servicio. Clientes y empresas crean solicitudes; admin puede indicar client_id.",
+                "description": "Clientes y empresas crean solicitudes para contratar un servicio.",
                 "operationId": "createContractRequest",
                 "requestBody": {
                     "required": true,
@@ -2119,22 +2342,20 @@
                                 ],
                                 "properties": {
                                     "client_id": {
-                                        "description": "Solo requerido si el usuario autenticado es admin",
                                         "type": "integer",
-                                        "example": 1
+                                        "nullable": true
                                     },
                                     "service_id": {
                                         "type": "integer",
                                         "example": 1
                                     },
                                     "description": {
-                                        "type": "string",
-                                        "example": "Necesito una API REST para mi plataforma."
+                                        "type": "string"
                                     },
                                     "budget": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 500
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -2145,15 +2366,6 @@
                 "responses": {
                     "201": {
                         "description": "Solicitud creada exitosamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
-                    },
-                    "403": {
-                        "description": "Sin permisos"
-                    },
-                    "422": {
-                        "description": "Error de validación"
                     }
                 },
                 "security": [
@@ -2168,14 +2380,14 @@
                 "tags": [
                     "Contract Requests"
                 ],
-                "summary": "Obtener solicitud por ID",
-                "description": "Retorna los detalles de una solicitud de contratación.",
+                "summary": "Obtener solicitud de contratación por ID",
+                "description": "Retorna los detalles de una solicitud. Solo puede consultarla el cliente que la envió, el freelancer que la recibió o un administrador.",
                 "operationId": "showContractRequest",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID de la solicitud",
+                        "description": "Identificador de la solicitud de contratación",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -2185,16 +2397,137 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Solicitud obtenida exitosamente"
+                        "description": "Solicitud obtenida exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solicitud obtenida exitosamente"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "contract_request": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "client_id": {
+                                                            "type": "integer",
+                                                            "example": 2
+                                                        },
+                                                        "freelancer_id": {
+                                                            "type": "integer",
+                                                            "example": 4
+                                                        },
+                                                        "service_id": {
+                                                            "type": "integer",
+                                                            "example": 3
+                                                        },
+                                                        "description": {
+                                                            "type": "string",
+                                                            "example": "Necesito desarrollar una API REST para mi plataforma."
+                                                        },
+                                                        "budget": {
+                                                            "type": "string",
+                                                            "example": "7500.00",
+                                                            "nullable": true
+                                                        },
+                                                        "status": {
+                                                            "type": "string",
+                                                            "enum": [
+                                                                "pending",
+                                                                "accepted",
+                                                                "rejected",
+                                                                "canceled"
+                                                            ],
+                                                            "example": "pending"
+                                                        },
+                                                        "created_at": {
+                                                            "type": "string",
+                                                            "format": "date-time"
+                                                        },
+                                                        "updated_at": {
+                                                            "type": "string",
+                                                            "format": "date-time"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "Usuario no autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No autorizado."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "403": {
-                        "description": "Sin permisos"
+                        "description": "El usuario no tiene permisos para consultar la solicitud",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No tienes permisos para ver esta solicitud."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Solicitud no encontrada"
+                        "description": "Solicitud de contratación no encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solicitud no encontrada."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2208,66 +2541,24 @@
                     "Contract Requests"
                 ],
                 "summary": "Actualizar solicitud de contratación",
-                "description": "Actualiza la descripción, presupuesto o estado de una solicitud.",
+                "description": "El cliente puede editar o cancelar una solicitud pendiente. El freelancer puede aceptarla o rechazarla.",
                 "operationId": "updateContractRequest",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID de la solicitud",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "example": 1
+                            "type": "integer"
                         }
                     }
                 ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "description": {
-                                        "type": "string",
-                                        "example": "Descripción actualizada."
-                                    },
-                                    "budget": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": 700
-                                    },
-                                    "status": {
-                                        "type": "string",
-                                        "enum": [
-                                            "pending",
-                                            "accepted",
-                                            "rejected",
-                                            "canceled"
-                                        ],
-                                        "example": "accepted"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
                 "responses": {
                     "200": {
                         "description": "Solicitud actualizada correctamente"
                     },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
-                    },
-                    "403": {
-                        "description": "Sin permisos"
-                    },
-                    "404": {
-                        "description": "Solicitud no encontrada"
-                    },
-                    "422": {
-                        "description": "Error de validación"
+                    "409": {
+                        "description": "La solicitud ya fue finalizada"
                     }
                 },
                 "security": [
@@ -2281,13 +2572,13 @@
                     "Contract Requests"
                 ],
                 "summary": "Eliminar solicitud de contratación",
-                "description": "Elimina una solicitud de contratación.",
+                "description": "Realiza un borrado lógico de la solicitud. El cliente propietario solo puede eliminar solicitudes pendientes. El administrador puede eliminar cualquier solicitud.",
                 "operationId": "deleteContractRequest",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID de la solicitud",
+                        "description": "Identificador de la solicitud de contratación",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -2297,16 +2588,119 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Solicitud eliminada correctamente"
+                        "description": "Solicitud eliminada correctamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solicitud eliminada correctamente."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "Usuario no autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No autorizado."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "403": {
-                        "description": "Sin permisos"
+                        "description": "El usuario no tiene permisos para eliminar la solicitud",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No tienes permisos para eliminar esta solicitud."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Solicitud no encontrada"
+                        "description": "Solicitud de contratación no encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solicitud no encontrada."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "La solicitud no puede eliminarse porque ya fue finalizada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solo puedes eliminar una solicitud pendiente."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "current_status": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "pending",
+                                                        "accepted",
+                                                        "rejected",
+                                                        "canceled"
+                                                    ],
+                                                    "example": "accepted"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
