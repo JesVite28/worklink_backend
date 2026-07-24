@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\ActivityLoggerService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -245,6 +246,48 @@ class ContractRequestController extends Controller
 
             'updated_at' =>
             $contractRequest->updated_at,
+        ];
+    }
+
+    private function paginationData(
+        LengthAwarePaginator $paginator
+    ): array {
+        $contractRequests = collect(
+            $paginator->items()
+        )
+            ->map(
+                fn (
+                    ContractRequest $contractRequest
+                ) =>
+                    $this->formatContractRequestResponse(
+                        $contractRequest
+                    )
+            )
+            ->values();
+
+        return [
+            'contract_requests' =>
+                $contractRequests,
+
+            'pagination' => [
+                'current_page' =>
+                    $paginator->currentPage(),
+
+                'last_page' =>
+                    $paginator->lastPage(),
+
+                'per_page' =>
+                    $paginator->perPage(),
+
+                'total' =>
+                    $paginator->total(),
+
+                'from' =>
+                    $paginator->firstItem(),
+
+                'to' =>
+                    $paginator->lastItem(),
+            ],
         ];
     }
 
