@@ -7,6 +7,7 @@ use App\Models\FreelancerProfile;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\ActivityLoggerService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 /**
@@ -64,7 +65,8 @@ class ContractRequestController extends Controller
             'user' => $this->formatUserResponse($profile->user),
             'description' => $profile->description,
             'specialty' => $profile->specialty,
-            'hourly_rate' => $profile->hourly_rate,
+            'rate_type' => $profile->rate_type,
+            'rate' => $profile->rate,
             'location' => $profile->location,
             'available' => $profile->available,
             'average_rate' => $profile->average_rate,
@@ -298,6 +300,17 @@ class ContractRequestController extends Controller
             description: "Contract request created for service ID {$service->id}"
         );
 
+        $clientName = trim(
+            $client->name
+            . ' '
+            . $client->last_name
+        );
+
+        NotificationService::contractRequest(
+            $service->freelancerProfile->user_id,
+            $clientName
+        );
+
         $contractRequest->load([
             'client.roles',
             'freelancer.user.roles',
@@ -454,6 +467,36 @@ class ContractRequestController extends Controller
             entityId: $contractRequest->id,
             description: "Contract request ID {$contractRequest->id} updated"
         );
+
+        if (
+            isset($validated['status'])
+            && in_array(
+                $validated['status'],
+                ['accepted', 'rejected', 'canceled'],
+                true
+            )
+        ) {
+            if (
+                in_array(
+                    $validated['status'],
+                    ['accepted', 'rejected'],
+                    true
+                )
+            ) {
+                NotificationService::contractRequestStatus(
+                    $contractRequest->client_id,
+                    $validated['status']
+                );
+            } elseif (
+                $validated['status'] === 'canceled'
+                && $contractRequest->freelancer
+            ) {
+                NotificationService::contractRequestStatus(
+                    $contractRequest->freelancer->user_id,
+                    'canceled'
+                );
+            }
+        }
 
         $contractRequest->refresh();
         $contractRequest->load([
