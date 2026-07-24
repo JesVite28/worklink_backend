@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Contract;
 use App\Models\ContractRequest;
 use App\Models\FreelancerProfile;
+use App\Models\Review;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\ActivityLoggerService;
@@ -157,7 +158,10 @@ class ContractController extends Controller
         ];
     }
 
-    private function formatContractResponse(Contract $contract): array
+    private function formatContractResponse(
+        Contract $contract,
+        ?User $authUser = null
+    ): array
     {
         $contract->loadMissing([
             'contractRequest.client.roles',
@@ -180,6 +184,12 @@ class ContractController extends Controller
                 : null,
             'total_amount' => $contract->total_amount,
             'status' => $contract->status,
+            'has_reviewed' => $authUser
+                ? Review::query()
+                    ->where('contract_id', $contract->id)
+                    ->where('evaluator_id', $authUser->id)
+                    ->exists()
+                : false,
             'created_at' => $contract->created_at,
             'updated_at' => $contract->updated_at,
         ];
@@ -353,7 +363,8 @@ class ContractController extends Controller
             ->map(
                 fn(Contract $contract) =>
                 $this->formatContractResponse(
-                    $contract
+                    $contract,
+                    $authUser
                 )
             )
             ->values();
@@ -668,7 +679,8 @@ class ContractController extends Controller
             'data' => [
                 'contract' =>
                 $this->formatContractResponse(
-                    $contract
+                    $contract,
+                    $authUser
                 ),
             ],
         ], 201);
@@ -739,7 +751,8 @@ class ContractController extends Controller
             'data' => [
                 'contract' =>
                 $this->formatContractResponse(
-                    $contract
+                    $contract,
+                    $authUser
                 ),
             ],
         ]);
@@ -1022,7 +1035,8 @@ class ContractController extends Controller
             'data' => [
                 'contract' =>
                 $this->formatContractResponse(
-                    $contract
+                    $contract,
+                    $authUser
                 ),
             ],
         ]);
