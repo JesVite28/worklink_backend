@@ -142,9 +142,9 @@ class ContractController extends Controller
             ),
             'freelancer_id' => $contractRequest->freelancer_id,
             'freelancer_profile' =>
-                $this->formatFreelancerProfileResponse(
-                    $contractRequest->freelancer
-                ),
+            $this->formatFreelancerProfileResponse(
+                $contractRequest->freelancer
+            ),
             'service_id' => $contractRequest->service_id,
             'service' => $this->formatServiceResponse(
                 $contractRequest->service
@@ -169,9 +169,9 @@ class ContractController extends Controller
             'id' => $contract->id,
             'request_id' => $contract->request_id,
             'contract_request' =>
-                $this->formatContractRequestResponse(
-                    $contract->contractRequest
-                ),
+            $this->formatContractRequestResponse(
+                $contract->contractRequest
+            ),
             'start_date' => $contract->start_date
                 ? $contract->start_date->format('Y-m-d')
                 : null,
@@ -204,7 +204,7 @@ class ContractController extends Controller
             || (
                 $contractRequest->freelancer
                 && $contractRequest->freelancer->user_id
-                    === $user->id
+                === $user->id
             );
     }
 
@@ -218,7 +218,7 @@ class ContractController extends Controller
             || (
                 $contractRequest->freelancer
                 && $contractRequest->freelancer->user_id
-                    === $user->id
+                === $user->id
             );
     }
 
@@ -228,7 +228,7 @@ class ContractController extends Controller
     ): bool {
         return $contract->contractRequest
             && $contract->contractRequest->client_id
-                === $user->id;
+            === $user->id;
     }
 
     private function isFreelancerOwner(
@@ -242,7 +242,7 @@ class ContractController extends Controller
         return $contract->contractRequest
             && $contract->contractRequest->freelancer
             && $contract->contractRequest
-                ->freelancer->user_id === $user->id;
+            ->freelancer->user_id === $user->id;
     }
 
     /**
@@ -283,6 +283,7 @@ class ContractController extends Controller
             ! $authUser->hasAnyRole([
                 'admin',
                 'cliente',
+                'empresa',
                 'freelancer',
             ])
         ) {
@@ -299,7 +300,10 @@ class ContractController extends Controller
         ]);
 
         if (! $authUser->hasRole('admin')) {
-            $isClient = $authUser->hasRole('cliente');
+            $isClient = $authUser->hasAnyRole([
+                'cliente',
+                'empresa',
+            ]);
             $isFreelancer = $authUser->hasRole(
                 'freelancer'
             );
@@ -347,10 +351,10 @@ class ContractController extends Controller
             ->latest('created_at')
             ->get()
             ->map(
-                fn (Contract $contract) =>
-                    $this->formatContractResponse(
-                        $contract
-                    )
+                fn(Contract $contract) =>
+                $this->formatContractResponse(
+                    $contract
+                )
             )
             ->values();
 
@@ -493,7 +497,7 @@ class ContractController extends Controller
                 'message' => 'Solo se puede crear un contrato desde una solicitud aceptada.',
                 'data' => [
                     'current_status' =>
-                        $contractRequest->status,
+                    $contractRequest->status,
                 ],
             ], 422);
         }
@@ -522,11 +526,11 @@ class ContractController extends Controller
 
         if (
             Contract::withTrashed()
-                ->where(
-                    'request_id',
-                    $contractRequest->id
-                )
-                ->exists()
+            ->where(
+                'request_id',
+                $contractRequest->id
+            )
+            ->exists()
         ) {
             return response()->json([
                 'success' => false,
@@ -559,10 +563,10 @@ class ContractController extends Controller
                 ) {
                     $lockedRequest =
                         ContractRequest::query()
-                            ->lockForUpdate()
-                            ->findOrFail(
-                                $contractRequest->id
-                            );
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $contractRequest->id
+                        );
 
                     if (
                         $lockedRequest->status
@@ -575,11 +579,11 @@ class ContractController extends Controller
 
                     if (
                         Contract::withTrashed()
-                            ->where(
-                                'request_id',
-                                $lockedRequest->id
-                            )
-                            ->exists()
+                        ->where(
+                            'request_id',
+                            $lockedRequest->id
+                        )
+                        ->exists()
                     ) {
                         throw new \LogicException(
                             'CONTRACT_ALREADY_EXISTS'
@@ -588,14 +592,14 @@ class ContractController extends Controller
 
                     $contract = Contract::create([
                         'request_id' =>
-                            $lockedRequest->id,
+                        $lockedRequest->id,
                         'start_date' =>
-                            $validated['start_date'],
+                        $validated['start_date'],
                         'end_date' =>
-                            $validated['end_date']
-                                ?? null,
+                        $validated['end_date']
+                            ?? null,
                         'total_amount' =>
-                            $totalAmount,
+                        $totalAmount,
                         'status' => 'in_process',
                     ]);
 
@@ -663,9 +667,9 @@ class ContractController extends Controller
             'message' => 'Contrato formalizado exitosamente',
             'data' => [
                 'contract' =>
-                    $this->formatContractResponse(
-                        $contract
-                    ),
+                $this->formatContractResponse(
+                    $contract
+                ),
             ],
         ], 201);
     }
@@ -734,9 +738,9 @@ class ContractController extends Controller
             'message' => 'Contrato obtenido exitosamente',
             'data' => [
                 'contract' =>
-                    $this->formatContractResponse(
-                        $contract
-                    ),
+                $this->formatContractResponse(
+                    $contract
+                ),
             ],
         ]);
     }
@@ -819,7 +823,7 @@ class ContractController extends Controller
                 'message' => 'El contrato ya fue finalizado y no puede modificarse.',
                 'data' => [
                     'current_status' =>
-                        $contract->status,
+                    $contract->status,
                 ],
             ], 409);
         }
@@ -937,15 +941,15 @@ class ContractController extends Controller
         )
             ? (
                 $validated['end_date']
-                    ? Carbon::parse(
-                        $validated['end_date']
-                    )
-                    : null
+                ? Carbon::parse(
+                    $validated['end_date']
+                )
+                : null
             )
             : (
                 $contract->end_date
-                    ? $contract->end_date->copy()
-                    : null
+                ? $contract->end_date->copy()
+                : null
             );
 
         if (
@@ -1017,9 +1021,9 @@ class ContractController extends Controller
             'message' => 'Contrato actualizado correctamente',
             'data' => [
                 'contract' =>
-                    $this->formatContractResponse(
-                        $contract
-                    ),
+                $this->formatContractResponse(
+                    $contract
+                ),
             ],
         ]);
     }
