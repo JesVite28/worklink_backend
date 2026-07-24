@@ -2710,6 +2710,47 @@
                 ]
             }
         },
+        "/api/service/contractRequest/{id}": {
+            "get": {
+                "tags": [
+                    "Contract Requests"
+                ],
+                "summary": "Listar solicitudes por servicio",
+                "description": "Retorna las solicitudes ligadas a un servicio específico.",
+                "operationId": "listContractRequestsByService",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del servicio",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Solicitudes obtenidas exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado. Token requerido o inválido"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Servicio no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/public/profiles": {
             "get": {
                 "tags": [

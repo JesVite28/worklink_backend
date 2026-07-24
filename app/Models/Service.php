@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -36,5 +37,13 @@ class Service extends Model
     public function freelancerProfile(): BelongsTo
     {
         return $this->belongsTo(FreelancerProfile::class, 'freelancer_id');
+    }
+
+    /**
+     * Solicitudes de contratación asociadas a este servicio.
+     */
+    public function contractRequests(): HasMany
+    {
+        return $this->hasMany(ContractRequest::class, 'service_id');
     }
 }

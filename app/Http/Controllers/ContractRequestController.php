@@ -488,52 +488,22 @@ class ContractRequestController extends Controller
         return $query;
     }
 
-    private function paginationData(
-        $paginator
-    ): array {
-        return [
-            'contract_requests' =>
-            collect(
-                $paginator->items()
-            )
-                ->map(
-                    fn(
-                        ContractRequest $request
-                    ) =>
-                    $this
-                        ->formatContractRequestResponse(
-                            $request
-                        )
-                )
-                ->values(),
+    private function canViewServiceContractRequests(Service $service): bool
+    {
+        $user = auth('api')->user();
 
-            'pagination' => [
-                'current_page' =>
-                $paginator->currentPage(),
+        if (! $user) {
+            return false;
+        }
 
-                'last_page' =>
-                $paginator->lastPage(),
+        $service->loadMissing('freelancerProfile');
 
-                'per_page' =>
-                $paginator->perPage(),
-
-                'total' =>
-                $paginator->total(),
-
-                'from' =>
-                $paginator->firstItem(),
-
-                'to' =>
-                $paginator->lastItem(),
-            ],
-        ];
+        return $user->hasRole('admin')
+            || (
+                $service->freelancerProfile
+                && $service->freelancerProfile->user_id === $user->id
+            );
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Listado
-    |--------------------------------------------------------------------------
-    */
 
     /**
      * @OA\Get(
@@ -1213,6 +1183,66 @@ class ContractRequestController extends Controller
     | Actualizar
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * @OA\Get(
+     *     path="/api/service/contractRequest/{id}",
+     *     operationId="listContractRequestsByService",
+     *     tags={"Contract Requests"},
+     *     summary="Listar solicitudes por servicio",
+     *     description="Retorna las solicitudes ligadas a un servicio específico.",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID del servicio",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(response=200, description="Solicitudes obtenidas exitosamente"),
+     *     @OA\Response(response=401, description="No autorizado. Token requerido o inválido"),
+     *     @OA\Response(response=403, description="Sin permisos"),
+     *     @OA\Response(response=404, description="Servicio no encontrado")
+     * )
+     */
+    public function byService(int $id)
+    {
+        $service = Service::with('freelancerProfile')->find($id);
+
+        if (! $service) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Servicio no encontrado.',
+            ], 404);
+        }
+
+        if (! $this->canViewServiceContractRequests($service)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No tienes permisos para ver las solicitudes de este servicio.',
+            ], 403);
+        }
+
+        $requests = $service->contractRequests()
+            ->with([
+                'client.roles',
+                'freelancer.user.roles',
+                'service',
+            ])
+            ->latest('created_at')
+            ->get()
+            ->map(fn (ContractRequest $contractRequest) => $this->formatContractRequestResponse($contractRequest))
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Solicitudes del servicio obtenidas exitosamente',
+            'data' => [
+                'service_id' => $service->id,
+                'contract_requests' => $requests,
+            ],
+        ]);
+    }
 
     /**
      * @OA\Put(
