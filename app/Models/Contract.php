@@ -5,11 +5,22 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Contract extends Model
 {
     use HasFactory, SoftDeletes;
+
+    public const STATUS_IN_PROCESS = 'in_process';
+    public const STATUS_COMPLETED = 'completed';
+    public const STATUS_CANCELED = 'canceled';
+
+    public const STATUSES = [
+        self::STATUS_IN_PROCESS,
+        self::STATUS_COMPLETED,
+        self::STATUS_CANCELED,
+    ];
 
     protected $table = 'contracts';
 
@@ -31,11 +42,19 @@ class Contract extends Model
         'deleted_at' => 'datetime',
     ];
 
-    /**
-     * Contract request that originated this contract.
-     */
     public function contractRequest(): BelongsTo
     {
-        return $this->belongsTo(ContractRequest::class, 'request_id');
+        return $this->belongsTo(
+            ContractRequest::class,
+            'request_id'
+        );
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(
+            Review::class,
+            'contract_id'
+        );
     }
 }

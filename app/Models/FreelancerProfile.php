@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class FreelancerProfile extends Model
 {
@@ -60,21 +60,56 @@ class FreelancerProfile extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(
+            User::class,
+            'user_id'
+        );
     }
 
     public function services(): HasMany
     {
-        return $this->hasMany(Service::class, 'freelancer_id');
+        return $this->hasMany(
+            Service::class,
+            'freelancer_id'
+        );
     }
 
     public function availabilities(): HasMany
     {
-        return $this->hasMany(Availability::class, 'freelancer_id');
+        return $this->hasMany(
+            Availability::class,
+            'freelancer_id'
+        );
     }
 
     public function briefcases(): HasMany
     {
-        return $this->hasMany(Briefcase::class, 'freelancer_id');
+        return $this->hasMany(
+            Briefcase::class,
+            'freelancer_id'
+        );
+    }
+
+    /**
+     * Postulaciones realizadas por el freelancer.
+     */
+    public function applications(): HasMany
+    {
+        return $this->hasMany(
+            Application::class,
+            'freelancer_id'
+        );
+    }
+
+    /**
+     * Calificaciones recibidas por el usuario freelancer.
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(
+            Review::class,
+            'evaluated_id',
+            'user_id'
+        );
     }
 }

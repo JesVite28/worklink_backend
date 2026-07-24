@@ -264,6 +264,350 @@
                 ]
             }
         },
+        "/api/applications": {
+            "get": {
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Listar postulaciones",
+                "description": "El administrador consulta todas; el freelancer consulta las propias; la empresa consulta las recibidas en sus vacantes.",
+                "operationId": "listApplications",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "accepted",
+                                "rejected"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "vacancy_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "freelancer_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Laravel"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "example": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Postulaciones obtenidas exitosamente"
+                    },
+                    "403": {
+                        "description": "Rol sin acceso al módulo"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Postularse a una vacante",
+                "description": "El freelancer autenticado se postula a una vacante abierta. freelancer_id y status son determinados por el backend.",
+                "operationId": "createApplication",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "vacancy_id"
+                                ],
+                                "properties": {
+                                    "vacancy_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Me interesa la vacante. Tengo experiencia desarrollando APIs REST con Laravel.",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Postulación creada exitosamente"
+                    },
+                    "403": {
+                        "description": "Solo los freelancers pueden postularse"
+                    },
+                    "409": {
+                        "description": "El freelancer ya se postuló a la vacante"
+                    },
+                    "422": {
+                        "description": "Vacante no disponible o datos inválidos"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/applications/me": {
+            "get": {
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Obtener mis postulaciones",
+                "description": "Obtiene las postulaciones realizadas por el freelancer autenticado.",
+                "operationId": "listMyApplications",
+                "responses": {
+                    "200": {
+                        "description": "Postulaciones obtenidas exitosamente"
+                    },
+                    "403": {
+                        "description": "El usuario no tiene rol freelancer"
+                    },
+                    "404": {
+                        "description": "Perfil freelancer no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/applications/vacancy/{vacancyId}": {
+            "get": {
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Obtener postulaciones de una vacante",
+                "description": "Solo puede consultarlas la empresa propietaria de la vacante o un administrador.",
+                "operationId": "applicationsByVacancy",
+                "parameters": [
+                    {
+                        "name": "vacancyId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "accepted",
+                                "rejected"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Postulaciones de la vacante obtenidas exitosamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Vacante no encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/applications/{id}": {
+            "get": {
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Obtener postulación por ID",
+                "description": "Puede consultarla el freelancer propietario, la empresa de la vacante o un administrador.",
+                "operationId": "showApplication",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Postulación obtenida exitosamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Postulación no encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Eliminar postulación",
+                "description": "El freelancer propietario puede retirar una postulación pendiente. El administrador puede eliminar cualquier postulación.",
+                "operationId": "deleteApplication",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Postulación eliminada correctamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Postulación no encontrada"
+                    },
+                    "409": {
+                        "description": "La postulación no puede retirarse en su estado actual"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Actualizar postulación",
+                "description": "Mientras esté pendiente, el freelancer puede editar su mensaje; la empresa puede aceptar o rechazar; el administrador puede realizar ambas acciones.",
+                "operationId": "updateApplication",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Mensaje de postulación actualizado.",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "accepted",
+                                            "rejected"
+                                        ],
+                                        "example": "accepted"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Postulación actualizada correctamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos para realizar la acción"
+                    },
+                    "404": {
+                        "description": "Postulación no encontrada"
+                    },
+                    "409": {
+                        "description": "La postulación ya fue finalizada"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/login": {
             "post": {
                 "tags": [
@@ -486,14 +830,14 @@
                     "Availabilities"
                 ],
                 "summary": "Listar disponibilidades",
-                "description": "Retorna todas las disponibilidades con perfil freelancer, usuario y rol.",
+                "description": "Retorna todas las disponibilidades registradas con los datos del perfil freelancer.",
                 "operationId": "listAvailabilities",
                 "responses": {
                     "200": {
                         "description": "Disponibilidades obtenidas exitosamente"
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "No autorizado"
                     }
                 },
                 "security": [
@@ -507,7 +851,7 @@
                     "Availabilities"
                 ],
                 "summary": "Crear disponibilidad",
-                "description": "Crea un rango de disponibilidad para un perfil freelancer. Un freelancer crea disponibilidad para su propio perfil; un admin puede indicar freelancer_id.",
+                "description": "El freelancer crea disponibilidad para su propio perfil. Un administrador puede indicar freelancer_id. No se permiten rangos superpuestos.",
                 "operationId": "createAvailability",
                 "requestBody": {
                     "required": true,
@@ -520,19 +864,20 @@
                                 ],
                                 "properties": {
                                     "freelancer_id": {
-                                        "description": "Solo requerido si el usuario autenticado es admin",
+                                        "description": "Solo debe enviarlo un administrador",
                                         "type": "integer",
-                                        "example": 1
+                                        "example": 1,
+                                        "nullable": true
                                     },
                                     "start_date": {
                                         "type": "string",
                                         "format": "date",
-                                        "example": "2026-06-15"
+                                        "example": "2026-08-01"
                                     },
                                     "end_date": {
                                         "type": "string",
                                         "format": "date",
-                                        "example": "2026-06-30"
+                                        "example": "2026-08-15"
                                     },
                                     "status": {
                                         "type": "string",
@@ -554,13 +899,181 @@
                         "description": "Disponibilidad creada exitosamente"
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "No autorizado"
                     },
                     "403": {
                         "description": "Sin permisos"
                     },
                     "422": {
-                        "description": "Error de validación"
+                        "description": "Datos inválidos o rango superpuesto"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/availabilities/me": {
+            "get": {
+                "tags": [
+                    "Availabilities"
+                ],
+                "summary": "Obtener mis disponibilidades",
+                "description": "Obtiene todos los periodos de disponibilidad registrados para el perfil freelancer asociado al usuario autenticado.",
+                "operationId": "listMyAvailabilities",
+                "responses": {
+                    "200": {
+                        "description": "Disponibilidades del freelancer obtenidas exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Tus disponibilidades fueron obtenidas exitosamente."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "freelancer_profile": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "user_id": {
+                                                            "type": "integer",
+                                                            "example": 5
+                                                        },
+                                                        "description": {
+                                                            "type": "string",
+                                                            "example": "Desarrollador web con experiencia en Laravel y React.",
+                                                            "nullable": true
+                                                        },
+                                                        "specialty": {
+                                                            "type": "string",
+                                                            "example": "Desarrollo web",
+                                                            "nullable": true
+                                                        },
+                                                        "location": {
+                                                            "type": "string",
+                                                            "example": "Pachuca, Hidalgo",
+                                                            "nullable": true
+                                                        },
+                                                        "service_area": {
+                                                            "type": "string",
+                                                            "example": "México y trabajo remoto",
+                                                            "nullable": true
+                                                        },
+                                                        "work_mode": {
+                                                            "type": "string",
+                                                            "example": "remote",
+                                                            "nullable": true
+                                                        },
+                                                        "experience": {
+                                                            "type": "string",
+                                                            "example": "3 años de experiencia",
+                                                            "nullable": true
+                                                        },
+                                                        "rate_type": {
+                                                            "type": "string",
+                                                            "example": "hourly",
+                                                            "nullable": true
+                                                        },
+                                                        "rate": {
+                                                            "type": "number",
+                                                            "format": "float",
+                                                            "example": 350,
+                                                            "nullable": true
+                                                        },
+                                                        "languages": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "string",
+                                                                "example": "Español"
+                                                            }
+                                                        },
+                                                        "available": {
+                                                            "type": "boolean",
+                                                            "example": true
+                                                        },
+                                                        "average_rate": {
+                                                            "type": "number",
+                                                            "format": "float",
+                                                            "example": 4.8,
+                                                            "nullable": true
+                                                        }
+                                                    },
+                                                    "type": "object",
+                                                    "nullable": true
+                                                },
+                                                "availabilities": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "freelancer_id": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "start_date": {
+                                                                "type": "string",
+                                                                "format": "date",
+                                                                "example": "2026-08-01"
+                                                            },
+                                                            "end_date": {
+                                                                "type": "string",
+                                                                "format": "date",
+                                                                "example": "2026-08-15"
+                                                            },
+                                                            "status": {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                    "available",
+                                                                    "busy",
+                                                                    "vacation"
+                                                                ],
+                                                                "example": "available"
+                                                            },
+                                                            "created_at": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "example": "2026-07-24T20:30:00.000000Z"
+                                                            },
+                                                            "updated_at": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "example": "2026-07-24T20:30:00.000000Z"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Usuario no autenticado"
+                    },
+                    "403": {
+                        "description": "El usuario autenticado no tiene el rol freelancer"
+                    },
+                    "404": {
+                        "description": "Perfil freelancer no encontrado"
                     }
                 },
                 "security": [
@@ -576,7 +1089,6 @@
                     "Availabilities"
                 ],
                 "summary": "Obtener disponibilidad por ID",
-                "description": "Retorna los detalles de una disponibilidad.",
                 "operationId": "showAvailability",
                 "parameters": [
                     {
@@ -595,7 +1107,7 @@
                         "description": "Disponibilidad obtenida exitosamente"
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "No autorizado"
                     },
                     "404": {
                         "description": "Disponibilidad no encontrada"
@@ -607,12 +1119,51 @@
                     }
                 ]
             },
-            "put": {
+            "delete": {
+                "tags": [
+                    "Availabilities"
+                ],
+                "summary": "Eliminar disponibilidad",
+                "description": "El freelancer propietario o un administrador pueden eliminar una disponibilidad.",
+                "operationId": "deleteAvailability",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de la disponibilidad",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Disponibilidad eliminada correctamente"
+                    },
+                    "401": {
+                        "description": "No autorizado"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Disponibilidad no encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
                 "tags": [
                     "Availabilities"
                 ],
                 "summary": "Actualizar disponibilidad",
-                "description": "Actualiza las fechas o el estado de una disponibilidad existente.",
+                "description": "El freelancer propietario o un administrador pueden actualizar fechas o estado. No se permiten rangos superpuestos.",
                 "operationId": "updateAvailability",
                 "parameters": [
                     {
@@ -635,12 +1186,12 @@
                                     "start_date": {
                                         "type": "string",
                                         "format": "date",
-                                        "example": "2026-06-15"
+                                        "example": "2026-08-01"
                                     },
                                     "end_date": {
                                         "type": "string",
                                         "format": "date",
-                                        "example": "2026-07-10"
+                                        "example": "2026-08-20"
                                     },
                                     "status": {
                                         "type": "string",
@@ -662,7 +1213,7 @@
                         "description": "Disponibilidad actualizada correctamente"
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "No autorizado"
                     },
                     "403": {
                         "description": "Sin permisos"
@@ -671,46 +1222,7 @@
                         "description": "Disponibilidad no encontrada"
                     },
                     "422": {
-                        "description": "Error de validación"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "Availabilities"
-                ],
-                "summary": "Eliminar disponibilidad",
-                "description": "Elimina una disponibilidad existente.",
-                "operationId": "deleteAvailability",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID de la disponibilidad",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "example": 1
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Disponibilidad eliminada correctamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
-                    },
-                    "403": {
-                        "description": "Sin permisos"
-                    },
-                    "404": {
-                        "description": "Disponibilidad no encontrada"
+                        "description": "Datos inválidos o rango superpuesto"
                     }
                 },
                 "security": [
@@ -1176,20 +1688,67 @@
                 ]
             }
         },
-        "/api/contracts": {
+        "/api/public/company-profiles": {
             "get": {
                 "tags": [
-                    "Contracts"
+                    "Company Profiles"
                 ],
-                "summary": "Listar contratos",
-                "description": "Retorna los contratos según el usuario autenticado y su rol.",
-                "operationId": "listContracts",
+                "summary": "Listar perfiles empresariales públicos",
+                "description": "Retorna únicamente perfiles pertenecientes a usuarios empresa activos.",
+                "operationId": "publicListCompanyProfiles",
                 "responses": {
                     "200": {
-                        "description": "Contratos obtenidos exitosamente"
+                        "description": "Perfiles empresariales públicos obtenidos exitosamente"
+                    }
+                }
+            }
+        },
+        "/api/public/company-profiles/{id}": {
+            "get": {
+                "tags": [
+                    "Company Profiles"
+                ],
+                "summary": "Obtener perfil empresarial público por ID",
+                "operationId": "publicShowCompanyProfile",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del perfil empresarial",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Perfil empresarial público obtenido exitosamente"
+                    },
+                    "404": {
+                        "description": "Perfil empresarial público no encontrado"
+                    }
+                }
+            }
+        },
+        "/api/company-profiles": {
+            "get": {
+                "tags": [
+                    "Company Profiles"
+                ],
+                "summary": "Listar perfiles empresariales",
+                "description": "El administrador consulta todos los perfiles. Una empresa consulta únicamente su propio perfil.",
+                "operationId": "listCompanyProfiles",
+                "responses": {
+                    "200": {
+                        "description": "Perfiles empresariales obtenidos exitosamente"
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "No autorizado"
+                    },
+                    "403": {
+                        "description": "Rol sin acceso al módulo"
                     }
                 },
                 "security": [
@@ -1200,49 +1759,44 @@
             },
             "post": {
                 "tags": [
-                    "Contracts"
+                    "Company Profiles"
                 ],
-                "summary": "Crear contrato",
-                "description": "Formaliza una solicitud de contratación aceptada en un contrato.",
-                "operationId": "createContract",
+                "summary": "Crear perfil empresarial",
+                "description": "Una empresa crea su propio perfil. El administrador puede indicar user_id.",
+                "operationId": "createCompanyProfile",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "request_id",
-                                    "start_date",
-                                    "total_amount"
+                                    "company_name"
                                 ],
                                 "properties": {
-                                    "request_id": {
+                                    "user_id": {
+                                        "description": "Solo debe enviarlo un administrador",
                                         "type": "integer",
-                                        "example": 1
+                                        "example": 3,
+                                        "nullable": true
                                     },
-                                    "start_date": {
+                                    "company_name": {
                                         "type": "string",
-                                        "format": "date",
-                                        "example": "2026-06-18"
+                                        "example": "Tecnologías WorkLink"
                                     },
-                                    "end_date": {
+                                    "description": {
                                         "type": "string",
-                                        "format": "date",
-                                        "example": "2026-07-18"
+                                        "example": "Empresa dedicada al desarrollo de soluciones digitales.",
+                                        "nullable": true
                                     },
-                                    "total_amount": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": 1200.5
-                                    },
-                                    "status": {
+                                    "industry": {
                                         "type": "string",
-                                        "enum": [
-                                            "in_process",
-                                            "completed",
-                                            "canceled"
-                                        ],
-                                        "example": "in_process"
+                                        "example": "Tecnologías de la información",
+                                        "nullable": true
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "example": "Pachuca, Hidalgo",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -1252,10 +1806,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Contrato creado exitosamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "Perfil empresarial creado exitosamente"
                     },
                     "403": {
                         "description": "Sin permisos"
@@ -1271,13 +1822,276 @@
                 ]
             }
         },
+        "/api/company-profiles/me": {
+            "get": {
+                "tags": [
+                    "Company Profiles"
+                ],
+                "summary": "Obtener mi perfil empresarial",
+                "operationId": "showMyCompanyProfile",
+                "responses": {
+                    "200": {
+                        "description": "Perfil empresarial obtenido exitosamente"
+                    },
+                    "403": {
+                        "description": "El usuario no tiene rol empresa"
+                    },
+                    "404": {
+                        "description": "Perfil empresarial no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/company-profiles/{id}": {
+            "get": {
+                "tags": [
+                    "Company Profiles"
+                ],
+                "summary": "Obtener perfil empresarial privado por ID",
+                "description": "Solo puede consultarlo el propietario o un administrador.",
+                "operationId": "showCompanyProfile",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Perfil empresarial obtenido exitosamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Perfil empresarial no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Company Profiles"
+                ],
+                "summary": "Eliminar perfil empresarial",
+                "description": "El propietario o un administrador pueden eliminar lógicamente el perfil.",
+                "operationId": "deleteCompanyProfile",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Perfil empresarial eliminado correctamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Perfil empresarial no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Company Profiles"
+                ],
+                "summary": "Actualizar perfil empresarial",
+                "description": "El propietario o un administrador pueden actualizar los datos editables. user_id y average_rate no pueden modificarse.",
+                "operationId": "updateCompanyProfile",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "company_name": {
+                                        "type": "string",
+                                        "example": "Tecnologías WorkLink S.A."
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Descripción actualizada de la empresa.",
+                                        "nullable": true
+                                    },
+                                    "industry": {
+                                        "type": "string",
+                                        "example": "Desarrollo de software",
+                                        "nullable": true
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "example": "Ciudad de México",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Perfil empresarial actualizado correctamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Perfil empresarial no encontrado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/contracts": {
+            "get": {
+                "tags": [
+                    "Contracts"
+                ],
+                "summary": "Listar contratos",
+                "description": "El administrador consulta todos los contratos, el cliente sus contrataciones y el freelancer los contratos de sus servicios.",
+                "operationId": "listContracts",
+                "responses": {
+                    "200": {
+                        "description": "Contratos obtenidos exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado"
+                    },
+                    "403": {
+                        "description": "El tipo de cuenta no tiene acceso al módulo"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Contracts"
+                ],
+                "summary": "Crear contrato",
+                "description": "El freelancer propietario o un administrador formaliza una solicitud aceptada. El contrato siempre inicia con estado in_process. Si no se envía total_amount, se utiliza el presupuesto de la solicitud.",
+                "operationId": "createContract",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "request_id",
+                                    "start_date"
+                                ],
+                                "properties": {
+                                    "request_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-07-23"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-08-23",
+                                        "nullable": true
+                                    },
+                                    "total_amount": {
+                                        "description": "Opcional si la solicitud tiene presupuesto",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 1200.5,
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Contrato creado exitosamente"
+                    },
+                    "401": {
+                        "description": "No autorizado"
+                    },
+                    "403": {
+                        "description": "Sin permisos para formalizar la contratación"
+                    },
+                    "404": {
+                        "description": "Solicitud no encontrada"
+                    },
+                    "409": {
+                        "description": "La solicitud ya tiene un contrato"
+                    },
+                    "422": {
+                        "description": "Datos inválidos o solicitud no aceptada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/contracts/{id}": {
             "get": {
                 "tags": [
                     "Contracts"
                 ],
                 "summary": "Obtener contrato por ID",
-                "description": "Retorna los detalles de un contrato.",
+                "description": "Retorna el contrato al administrador, cliente o freelancer involucrado.",
                 "operationId": "showContract",
                 "parameters": [
                     {
@@ -1296,7 +2110,7 @@
                         "description": "Contrato obtenido exitosamente"
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "No autorizado"
                     },
                     "403": {
                         "description": "Sin permisos"
@@ -1311,12 +2125,51 @@
                     }
                 ]
             },
-            "put": {
+            "delete": {
+                "tags": [
+                    "Contracts"
+                ],
+                "summary": "Eliminar contrato",
+                "description": "Elimina lógicamente un contrato. Solo los administradores pueden realizar esta acción.",
+                "operationId": "deleteContract",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID del contrato",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contrato eliminado correctamente"
+                    },
+                    "401": {
+                        "description": "No autorizado"
+                    },
+                    "403": {
+                        "description": "Solo administradores"
+                    },
+                    "404": {
+                        "description": "Contrato no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
                 "tags": [
                     "Contracts"
                 ],
                 "summary": "Actualizar contrato",
-                "description": "Actualiza fechas, monto o estado de un contrato.",
+                "description": "El administrador puede modificar fechas, monto y estado. El freelancer puede completar o cancelar. El cliente únicamente puede cancelar. Solo se modifican contratos en proceso.",
                 "operationId": "updateContract",
                 "parameters": [
                     {
@@ -1339,17 +2192,18 @@
                                     "start_date": {
                                         "type": "string",
                                         "format": "date",
-                                        "example": "2026-06-18"
+                                        "example": "2026-07-23"
                                     },
                                     "end_date": {
                                         "type": "string",
                                         "format": "date",
-                                        "example": "2026-07-18"
+                                        "example": "2026-08-23",
+                                        "nullable": true
                                     },
                                     "total_amount": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 1200.5
+                                        "example": 1500
                                     },
                                     "status": {
                                         "type": "string",
@@ -1371,55 +2225,19 @@
                         "description": "Contrato actualizado correctamente"
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "No autorizado"
                     },
                     "403": {
-                        "description": "Sin permisos"
+                        "description": "La acción no está permitida para el usuario"
                     },
                     "404": {
                         "description": "Contrato no encontrado"
+                    },
+                    "409": {
+                        "description": "El contrato ya fue completado o cancelado"
                     },
                     "422": {
-                        "description": "Error de validación"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "Contracts"
-                ],
-                "summary": "Eliminar contrato",
-                "description": "Elimina un contrato. Solo administradores.",
-                "operationId": "deleteContract",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID del contrato",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "example": 1
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Contrato eliminado correctamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
-                    },
-                    "403": {
-                        "description": "Sin permisos"
-                    },
-                    "404": {
-                        "description": "Contrato no encontrado"
+                        "description": "Datos inválidos"
                     }
                 },
                 "security": [
@@ -1435,14 +2253,69 @@
                     "Contract Requests"
                 ],
                 "summary": "Listar solicitudes de contratación",
-                "description": "Retorna las solicitudes de contratación según el usuario autenticado y su rol.",
+                "description": "Retorna las solicitudes según el rol del usuario autenticado.",
                 "operationId": "listContractRequests",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "accepted",
+                                "rejected",
+                                "canceled"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "service_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "freelancer_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "client_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Solicitudes obtenidas exitosamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
                     }
                 },
                 "security": [
@@ -1456,7 +2329,7 @@
                     "Contract Requests"
                 ],
                 "summary": "Crear solicitud de contratación",
-                "description": "Crea una solicitud para contratar un servicio. Clientes y empresas crean solicitudes; admin puede indicar client_id.",
+                "description": "Clientes y empresas crean solicitudes para contratar un servicio.",
                 "operationId": "createContractRequest",
                 "requestBody": {
                     "required": true,
@@ -1469,22 +2342,20 @@
                                 ],
                                 "properties": {
                                     "client_id": {
-                                        "description": "Solo requerido si el usuario autenticado es admin",
                                         "type": "integer",
-                                        "example": 1
+                                        "nullable": true
                                     },
                                     "service_id": {
                                         "type": "integer",
                                         "example": 1
                                     },
                                     "description": {
-                                        "type": "string",
-                                        "example": "Necesito una API REST para mi plataforma."
+                                        "type": "string"
                                     },
                                     "budget": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 500
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -1495,15 +2366,6 @@
                 "responses": {
                     "201": {
                         "description": "Solicitud creada exitosamente"
-                    },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
-                    },
-                    "403": {
-                        "description": "Sin permisos"
-                    },
-                    "422": {
-                        "description": "Error de validación"
                     }
                 },
                 "security": [
@@ -1518,14 +2380,14 @@
                 "tags": [
                     "Contract Requests"
                 ],
-                "summary": "Obtener solicitud por ID",
-                "description": "Retorna los detalles de una solicitud de contratación.",
+                "summary": "Obtener solicitud de contratación por ID",
+                "description": "Retorna los detalles de una solicitud. Solo puede consultarla el cliente que la envió, el freelancer que la recibió o un administrador.",
                 "operationId": "showContractRequest",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID de la solicitud",
+                        "description": "Identificador de la solicitud de contratación",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -1535,16 +2397,137 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Solicitud obtenida exitosamente"
+                        "description": "Solicitud obtenida exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solicitud obtenida exitosamente"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "contract_request": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "client_id": {
+                                                            "type": "integer",
+                                                            "example": 2
+                                                        },
+                                                        "freelancer_id": {
+                                                            "type": "integer",
+                                                            "example": 4
+                                                        },
+                                                        "service_id": {
+                                                            "type": "integer",
+                                                            "example": 3
+                                                        },
+                                                        "description": {
+                                                            "type": "string",
+                                                            "example": "Necesito desarrollar una API REST para mi plataforma."
+                                                        },
+                                                        "budget": {
+                                                            "type": "string",
+                                                            "example": "7500.00",
+                                                            "nullable": true
+                                                        },
+                                                        "status": {
+                                                            "type": "string",
+                                                            "enum": [
+                                                                "pending",
+                                                                "accepted",
+                                                                "rejected",
+                                                                "canceled"
+                                                            ],
+                                                            "example": "pending"
+                                                        },
+                                                        "created_at": {
+                                                            "type": "string",
+                                                            "format": "date-time"
+                                                        },
+                                                        "updated_at": {
+                                                            "type": "string",
+                                                            "format": "date-time"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "Usuario no autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No autorizado."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "403": {
-                        "description": "Sin permisos"
+                        "description": "El usuario no tiene permisos para consultar la solicitud",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No tienes permisos para ver esta solicitud."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Solicitud no encontrada"
+                        "description": "Solicitud de contratación no encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solicitud no encontrada."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1558,66 +2541,24 @@
                     "Contract Requests"
                 ],
                 "summary": "Actualizar solicitud de contratación",
-                "description": "Actualiza la descripción, presupuesto o estado de una solicitud.",
+                "description": "El cliente puede editar o cancelar una solicitud pendiente. El freelancer puede aceptarla o rechazarla.",
                 "operationId": "updateContractRequest",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID de la solicitud",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "example": 1
+                            "type": "integer"
                         }
                     }
                 ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "description": {
-                                        "type": "string",
-                                        "example": "Descripción actualizada."
-                                    },
-                                    "budget": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": 700
-                                    },
-                                    "status": {
-                                        "type": "string",
-                                        "enum": [
-                                            "pending",
-                                            "accepted",
-                                            "rejected",
-                                            "canceled"
-                                        ],
-                                        "example": "accepted"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
                 "responses": {
                     "200": {
                         "description": "Solicitud actualizada correctamente"
                     },
-                    "401": {
-                        "description": "No autorizado. Token requerido o inválido"
-                    },
-                    "403": {
-                        "description": "Sin permisos"
-                    },
-                    "404": {
-                        "description": "Solicitud no encontrada"
-                    },
-                    "422": {
-                        "description": "Error de validación"
+                    "409": {
+                        "description": "La solicitud ya fue finalizada"
                     }
                 },
                 "security": [
@@ -1631,13 +2572,13 @@
                     "Contract Requests"
                 ],
                 "summary": "Eliminar solicitud de contratación",
-                "description": "Elimina una solicitud de contratación.",
+                "description": "Realiza un borrado lógico de la solicitud. El cliente propietario solo puede eliminar solicitudes pendientes. El administrador puede eliminar cualquier solicitud.",
                 "operationId": "deleteContractRequest",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID de la solicitud",
+                        "description": "Identificador de la solicitud de contratación",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -1647,16 +2588,119 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Solicitud eliminada correctamente"
+                        "description": "Solicitud eliminada correctamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solicitud eliminada correctamente."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
-                        "description": "No autorizado. Token requerido o inválido"
+                        "description": "Usuario no autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No autorizado."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "403": {
-                        "description": "Sin permisos"
+                        "description": "El usuario no tiene permisos para eliminar la solicitud",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No tienes permisos para eliminar esta solicitud."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Solicitud no encontrada"
+                        "description": "Solicitud de contratación no encontrada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solicitud no encontrada."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "La solicitud no puede eliminarse porque ya fue finalizada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Solo puedes eliminar una solicitud pendiente."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "current_status": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "pending",
+                                                        "accepted",
+                                                        "rejected",
+                                                        "canceled"
+                                                    ],
+                                                    "example": "accepted"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2110,6 +3154,755 @@
                 }
             }
         },
+        "/api/messages/conversations": {
+            "get": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Listar conversaciones del usuario",
+                "operationId": "listMessageConversations",
+                "responses": {
+                    "200": {
+                        "description": "Conversaciones obtenidas exitosamente"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages/conversation/{userId}": {
+            "get": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Obtener conversación con otro usuario",
+                "operationId": "showMessageConversation",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Conversación obtenida exitosamente"
+                    },
+                    "404": {
+                        "description": "Usuario no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages": {
+            "post": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Enviar mensaje",
+                "operationId": "sendMessage",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "receiver_id",
+                                    "content"
+                                ],
+                                "properties": {
+                                    "receiver_id": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "example": "Hola, me interesa tu servicio."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Mensaje enviado exitosamente"
+                    },
+                    "422": {
+                        "description": "Datos inválidos"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages/{id}/read": {
+            "patch": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Marcar mensaje como leído",
+                "operationId": "markMessageAsRead",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Mensaje marcado como leído"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages/read-all/{userId}": {
+            "patch": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Marcar conversación como leída",
+                "operationId": "markConversationAsRead",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Conversación marcada como leída"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/messages/{id}": {
+            "delete": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Eliminar mensaje no leído",
+                "description": "El emisor puede retirar un mensaje mientras no haya sido leído. El administrador puede eliminar cualquiera.",
+                "operationId": "deleteMessage",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Mensaje eliminado correctamente"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Listar notificaciones propias",
+                "operationId": "listNotifications",
+                "responses": {
+                    "200": {
+                        "description": "Notificaciones obtenidas"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/unread-count": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Obtener cantidad de notificaciones no leídas",
+                "operationId": "notificationUnreadCount",
+                "responses": {
+                    "200": {
+                        "description": "Cantidad obtenida"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/{id}/read": {
+            "patch": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Marcar una notificación como leída",
+                "operationId": "markNotificationAsRead",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notificación actualizada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/read-all": {
+            "patch": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Marcar todas las notificaciones como leídas",
+                "operationId": "markAllNotificationsAsRead",
+                "responses": {
+                    "200": {
+                        "description": "Notificaciones actualizadas"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/{id}": {
+            "delete": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Eliminar una notificación propia",
+                "operationId": "deleteNotification",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notificación eliminada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/reports": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Listar reportes",
+                "description": "El administrador consulta todos los reportes. Los demás usuarios consultan únicamente los reportes que enviaron.",
+                "operationId": "listReports",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "reviewed",
+                                "resolved"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "reported_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reportes obtenidos exitosamente"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Reportar a otro usuario",
+                "operationId": "createReport",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "reported_id",
+                                    "reason",
+                                    "description"
+                                ],
+                                "properties": {
+                                    "reported_id": {
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "example": "Comportamiento inapropiado"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "El usuario utilizó lenguaje ofensivo durante la conversación."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Reporte enviado exitosamente"
+                    },
+                    "422": {
+                        "description": "Datos inválidos"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/reports/summary": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Obtener resumen administrativo de reportes",
+                "operationId": "reportsSummary",
+                "responses": {
+                    "200": {
+                        "description": "Resumen obtenido exitosamente"
+                    },
+                    "403": {
+                        "description": "Solo administradores"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/reports/{id}": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Obtener reporte por ID",
+                "operationId": "showReport",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reporte obtenido exitosamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Reporte no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Eliminar reporte",
+                "description": "El autor puede retirar un reporte pendiente. El administrador puede eliminar cualquiera.",
+                "operationId": "deleteReport",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reporte eliminado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Actualizar estado de un reporte",
+                "description": "Solo los administradores pueden cambiar el estado.",
+                "operationId": "updateReportStatus",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "pending",
+                                            "reviewed",
+                                            "resolved"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Estado actualizado"
+                    },
+                    "403": {
+                        "description": "Solo administradores"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/public/reviews/user/{userId}": {
+            "get": {
+                "tags": [
+                    "Reviews"
+                ],
+                "summary": "Consultar calificaciones recibidas por usuario",
+                "operationId": "publicReviewsByUser",
+                "parameters": [
+                    {
+                        "name": "userId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Calificaciones obtenidas"
+                    }
+                }
+            }
+        },
+        "/api/reviews": {
+            "get": {
+                "tags": [
+                    "Reviews"
+                ],
+                "summary": "Listar calificaciones relacionadas con el usuario",
+                "operationId": "listReviews",
+                "responses": {
+                    "200": {
+                        "description": "Calificaciones obtenidas"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Reviews"
+                ],
+                "summary": "Calificar al otro participante de un contrato completado",
+                "operationId": "createReview",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "contract_id",
+                                    "rating"
+                                ],
+                                "properties": {
+                                    "contract_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "rating": {
+                                        "type": "integer",
+                                        "maximum": 5,
+                                        "minimum": 1,
+                                        "example": 5
+                                    },
+                                    "comment": {
+                                        "type": "string",
+                                        "example": "Excelente trabajo y comunicación.",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Calificación creada"
+                    },
+                    "403": {
+                        "description": "El usuario no pertenece al contrato"
+                    },
+                    "409": {
+                        "description": "El contrato no está completado o ya fue calificado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/reviews/{id}": {
+            "get": {
+                "tags": [
+                    "Reviews"
+                ],
+                "summary": "Obtener calificación por ID",
+                "operationId": "showReview",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Calificación obtenida"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Reviews"
+                ],
+                "summary": "Eliminar calificación",
+                "description": "Puede eliminarla su autor o un administrador.",
+                "operationId": "deleteReview",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Calificación eliminada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Reviews"
+                ],
+                "summary": "Actualizar una calificación propia",
+                "operationId": "updateReview",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "rating": {
+                                        "type": "integer",
+                                        "maximum": 5,
+                                        "minimum": 1
+                                    },
+                                    "comment": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Calificación actualizada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/roles": {
             "get": {
                 "tags": [
@@ -2342,6 +4135,36 @@
                 "responses": {
                     "200": {
                         "description": "Servicios públicos obtenidos exitosamente"
+                    }
+                }
+            }
+        },
+        "/api/public/services/freelancer/{freelancerId}": {
+            "get": {
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Obtener servicios públicos de un freelancer",
+                "description": "Retorna los servicios activos pertenecientes a un perfil freelancer activo.",
+                "operationId": "publicServicesByFreelancer",
+                "parameters": [
+                    {
+                        "name": "freelancerId",
+                        "in": "path",
+                        "description": "ID del perfil freelancer",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Servicios públicos del freelancer obtenidos exitosamente"
+                    },
+                    "404": {
+                        "description": "Perfil freelancer no encontrado"
                     }
                 }
             }
@@ -3130,6 +4953,473 @@
                     }
                 ]
             }
+        },
+        "/api/public/vacancies": {
+            "get": {
+                "tags": [
+                    "Vacancies"
+                ],
+                "summary": "Listar vacantes públicas",
+                "description": "Retorna únicamente vacantes abiertas pertenecientes a empresas activas.",
+                "operationId": "publicListVacancies",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Laravel"
+                        }
+                    },
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Desarrollo de software"
+                        }
+                    },
+                    {
+                        "name": "location",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Pachuca"
+                        }
+                    },
+                    {
+                        "name": "min_salary",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "format": "float",
+                            "example": 10000
+                        }
+                    },
+                    {
+                        "name": "max_salary",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "format": "float",
+                            "example": 30000
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "example": 12
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Vacantes públicas obtenidas exitosamente"
+                    }
+                }
+            }
+        },
+        "/api/public/vacancies/company/{companyId}": {
+            "get": {
+                "tags": [
+                    "Vacancies"
+                ],
+                "summary": "Obtener vacantes públicas de una empresa",
+                "operationId": "publicVacanciesByCompany",
+                "parameters": [
+                    {
+                        "name": "companyId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Vacantes públicas de la empresa obtenidas exitosamente"
+                    },
+                    "404": {
+                        "description": "Empresa no encontrada"
+                    }
+                }
+            }
+        },
+        "/api/public/vacancies/{id}": {
+            "get": {
+                "tags": [
+                    "Vacancies"
+                ],
+                "summary": "Obtener vacante pública por ID",
+                "operationId": "publicShowVacancy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Vacante pública obtenida exitosamente"
+                    },
+                    "404": {
+                        "description": "Vacante pública no encontrada"
+                    }
+                }
+            }
+        },
+        "/api/vacancies": {
+            "get": {
+                "tags": [
+                    "Vacancies"
+                ],
+                "summary": "Listar vacantes para administración",
+                "description": "El administrador consulta todas las vacantes. Una empresa consulta únicamente las vacantes de su perfil.",
+                "operationId": "listVacancies",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Laravel"
+                        }
+                    },
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Desarrollo de software"
+                        }
+                    },
+                    {
+                        "name": "location",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Pachuca"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "open",
+                                "paused",
+                                "closed"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "example": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Vacantes obtenidas exitosamente"
+                    },
+                    "403": {
+                        "description": "Rol sin acceso al módulo"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Vacancies"
+                ],
+                "summary": "Crear vacante",
+                "description": "Una empresa crea una vacante para su propio perfil. El administrador puede indicar company_id.",
+                "operationId": "createVacancy",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "description",
+                                    "category",
+                                    "location"
+                                ],
+                                "properties": {
+                                    "company_id": {
+                                        "description": "Solo debe enviarlo un administrador",
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Desarrollador Laravel"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Buscamos desarrollador con experiencia en APIs REST."
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "example": "Desarrollo de software"
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "example": "Pachuca, Hidalgo"
+                                    },
+                                    "salary": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 18000,
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "open",
+                                            "paused"
+                                        ],
+                                        "example": "open"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Vacante creada exitosamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "422": {
+                        "description": "Datos inválidos o empresa no disponible"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/vacancies/me": {
+            "get": {
+                "tags": [
+                    "Vacancies"
+                ],
+                "summary": "Obtener mis vacantes",
+                "description": "Retorna las vacantes del perfil empresarial asociado al usuario autenticado.",
+                "operationId": "listMyVacancies",
+                "responses": {
+                    "200": {
+                        "description": "Vacantes de la empresa obtenidas exitosamente"
+                    },
+                    "403": {
+                        "description": "El usuario no tiene rol empresa"
+                    },
+                    "404": {
+                        "description": "Perfil empresarial no encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/vacancies/{id}": {
+            "get": {
+                "tags": [
+                    "Vacancies"
+                ],
+                "summary": "Obtener vacante privada por ID",
+                "description": "Solo puede consultarla la empresa propietaria o un administrador.",
+                "operationId": "showVacancy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Vacante obtenida exitosamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Vacante no encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Vacancies"
+                ],
+                "summary": "Eliminar vacante",
+                "description": "Realiza borrado lógico. Solo la empresa propietaria o un administrador pueden eliminarla.",
+                "operationId": "deleteVacancy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Vacante eliminada correctamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Vacante no encontrada"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Vacancies"
+                ],
+                "summary": "Actualizar vacante",
+                "description": "La empresa propietaria o el administrador pueden modificar una vacante abierta o pausada. Una vacante cerrada ya no puede modificarse ni reabrirse.",
+                "operationId": "updateVacancy",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Desarrollador Laravel Senior"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Descripción actualizada de la vacante."
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "example": "Desarrollo de software"
+                                    },
+                                    "location": {
+                                        "type": "string",
+                                        "example": "Modalidad remota"
+                                    },
+                                    "salary": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 22000,
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "open",
+                                            "paused",
+                                            "closed"
+                                        ],
+                                        "example": "paused"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Vacante actualizada correctamente"
+                    },
+                    "403": {
+                        "description": "Sin permisos"
+                    },
+                    "404": {
+                        "description": "Vacante no encontrada"
+                    },
+                    "409": {
+                        "description": "La vacante ya está cerrada"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -3151,6 +5441,10 @@
             "description": "Endpoints para el asistente inteligente de WorkLink"
         },
         {
+            "name": "Applications",
+            "description": "Endpoints para la gestión de postulaciones a vacantes"
+        },
+        {
             "name": "Auth",
             "description": "Autenticación y manejo de sesión"
         },
@@ -3164,11 +5458,15 @@
         },
         {
             "name": "Availabilities",
-            "description": "Endpoints para la gestión de la disponibilidad horaria de freelancers"
+            "description": "Endpoints para la gestión de la disponibilidad de freelancers"
         },
         {
             "name": "Briefcases",
             "description": "Endpoints para la gestión del portafolio de freelancers"
+        },
+        {
+            "name": "Company Profiles",
+            "description": "Endpoints para la gestión de perfiles empresariales"
         },
         {
             "name": "Contracts",
@@ -3187,8 +5485,28 @@
             "description": "Endpoints públicos para documentos legales"
         },
         {
+            "name": "Messages",
+            "description": "Endpoints para mensajería entre usuarios"
+        },
+        {
+            "name": "Notifications",
+            "description": "Gestión de notificaciones del usuario autenticado"
+        },
+        {
+            "name": "Reports",
+            "description": "Reportes de confianza y seguridad entre usuarios"
+        },
+        {
+            "name": "Reviews",
+            "description": "Calificaciones entre participantes de contratos completados"
+        },
+        {
             "name": "Services",
             "description": "Endpoints para la gestión de servicios de freelancers"
+        },
+        {
+            "name": "Vacancies",
+            "description": "Endpoints para la gestión de vacantes empresariales"
         }
     ]
 }

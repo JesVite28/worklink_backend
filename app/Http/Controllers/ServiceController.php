@@ -152,10 +152,10 @@ class ServiceController extends Controller
             'freelancer_id' => $service->freelancer_id,
 
             'freelancer_profile' =>
-                $this->formatFreelancerProfileResponse(
-                    $service->freelancerProfile,
-                    $public
-                ),
+            $this->formatFreelancerProfileResponse(
+                $service->freelancerProfile,
+                $public
+            ),
 
             'title' => $service->title,
             'description' => $service->description,
@@ -224,8 +224,8 @@ class ServiceController extends Controller
             ->latest('created_at')
             ->get()
             ->map(
-                fn (Service $service) =>
-                    $this->formatServiceResponse($service, true)
+                fn(Service $service) =>
+                $this->formatServiceResponse($service, true)
             )
             ->values();
 
@@ -238,6 +238,99 @@ class ServiceController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/public/services/freelancer/{freelancerId}",
+     *     operationId="publicServicesByFreelancer",
+     *     tags={"Services"},
+     *     summary="Obtener servicios públicos de un freelancer",
+     *     description="Retorna los servicios activos pertenecientes a un perfil freelancer activo.",
+     *
+     *     @OA\Parameter(
+     *         name="freelancerId",
+     *         in="path",
+     *         required=true,
+     *         description="ID del perfil freelancer",
+     *         @OA\Schema(
+     *             type="integer",
+     *             example=1
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Servicios públicos del freelancer obtenidos exitosamente"
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=404,
+     *         description="Perfil freelancer no encontrado"
+     *     )
+     * )
+     */
+    public function publicByFreelancer(
+        int $freelancerId
+    ) {
+        $profile = FreelancerProfile::query()
+            ->with('user.roles')
+            ->whereHas(
+                'user',
+                function ($userQuery) {
+                    $userQuery->where(
+                        'is_active',
+                        true
+                    );
+                }
+            )
+            ->find($freelancerId);
+
+        if (! $profile) {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                'Perfil freelancer no encontrado.',
+            ], 404);
+        }
+
+        $services = Service::query()
+            ->with(
+                'freelancerProfile.user.roles'
+            )
+            ->where(
+                'freelancer_id',
+                $profile->id
+            )
+            ->where(
+                'is_active',
+                true
+            )
+            ->latest('created_at')
+            ->get()
+            ->map(
+                fn(Service $service) =>
+                $this->formatServiceResponse(
+                    $service,
+                    true
+                )
+            )
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'message' =>
+            'Servicios públicos del freelancer obtenidos exitosamente',
+
+            'data' => [
+                'freelancer_profile' =>
+                $this->formatFreelancerProfileResponse(
+                    $profile,
+                    true
+                ),
+
+                'services' => $services,
+            ],
+        ]);
+    }
     /**
      * @OA\Get(
      *     path="/api/public/services/{id}",
@@ -331,8 +424,8 @@ class ServiceController extends Controller
             ->latest('created_at')
             ->get()
             ->map(
-                fn (Service $service) =>
-                    $this->formatServiceResponse($service)
+                fn(Service $service) =>
+                $this->formatServiceResponse($service)
             )
             ->values();
 
@@ -412,8 +505,8 @@ class ServiceController extends Controller
             ->latest('created_at')
             ->get()
             ->map(
-                fn (Service $service) =>
-                    $this->formatServiceResponse($service)
+                fn(Service $service) =>
+                $this->formatServiceResponse($service)
             )
             ->values();
 
@@ -422,9 +515,9 @@ class ServiceController extends Controller
             'message' => 'Servicios del freelancer obtenidos exitosamente',
             'data' => [
                 'freelancer_profile' =>
-                    $this->formatFreelancerProfileResponse(
-                        $profile
-                    ),
+                $this->formatFreelancerProfileResponse(
+                    $profile
+                ),
                 'services' => $services,
             ],
         ]);

@@ -7,36 +7,51 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Availability extends Model
+class Application extends Model
 {
     use HasFactory, SoftDeletes;
 
-    public const STATUS_AVAILABLE = 'available';
-    public const STATUS_BUSY = 'busy';
-    public const STATUS_VACATION = 'vacation';
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_ACCEPTED = 'accepted';
+    public const STATUS_REJECTED = 'rejected';
 
     public const STATUSES = [
-        self::STATUS_AVAILABLE,
-        self::STATUS_BUSY,
-        self::STATUS_VACATION,
+        self::STATUS_PENDING,
+        self::STATUS_ACCEPTED,
+        self::STATUS_REJECTED,
     ];
 
+    protected $table = 'applications';
+
     protected $fillable = [
+        'vacancy_id',
         'freelancer_id',
-        'start_date',
-        'end_date',
+        'message',
         'status',
     ];
 
     protected $casts = [
+        'vacancy_id' => 'integer',
         'freelancer_id' => 'integer',
-        'start_date' => 'date',
-        'end_date' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
 
+    /**
+     * Vacante a la que pertenece la postulación.
+     */
+    public function vacancy(): BelongsTo
+    {
+        return $this->belongsTo(
+            Vacancy::class,
+            'vacancy_id'
+        );
+    }
+
+    /**
+     * Perfil freelancer que realizó la postulación.
+     */
     public function freelancerProfile(): BelongsTo
     {
         return $this->belongsTo(
