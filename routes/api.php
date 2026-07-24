@@ -29,12 +29,28 @@ use App\Http\Controllers\Api\ChatBotController;
 |--------------------------------------------------------------------------
 */
 
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
+Route::post(
+    '/login',
+    [
+        AuthController::class,
+        'login',
+    ]
+);
+
+Route::post(
+    '/register',
+    [
+        AuthController::class,
+        'register',
+    ]
+);
 
 Route::post(
     '/chatbot/message',
-    [ChatBotController::class, 'sendPublicMessage']
+    [
+        ChatBotController::class,
+        'sendPublicMessage',
+    ]
 )->middleware('throttle:20,1');
 
 
@@ -138,6 +154,14 @@ Route::prefix('public')->group(function () {
     );
 
     Route::get(
+        '/services/freelancer/{freelancerId}',
+        [
+            ServiceController::class,
+            'publicByFreelancer',
+        ]
+    )->whereNumber('freelancerId');
+
+    Route::get(
         '/services/{id}',
         [
             ServiceController::class,
@@ -207,6 +231,7 @@ Route::prefix('public')->group(function () {
         ]
     )->whereNumber('id');
 
+
     /*
     |--------------------------------------------------------------------------
     | Public Reviews
@@ -215,17 +240,26 @@ Route::prefix('public')->group(function () {
 
     Route::get(
         '/reviews/user/{userId}',
-        [ReviewController::class, 'publicByUser']
+        [
+            ReviewController::class,
+            'publicByUser',
+        ]
     )->whereNumber('userId');
 
     Route::get(
         '/reviews/freelancer/{freelancerId}',
-        [ReviewController::class, 'publicByFreelancer']
+        [
+            ReviewController::class,
+            'publicByFreelancer',
+        ]
     )->whereNumber('freelancerId');
 
     Route::get(
         '/reviews/company/{companyId}',
-        [ReviewController::class, 'publicByCompany']
+        [
+            ReviewController::class,
+            'publicByCompany',
+        ]
     )->whereNumber('companyId');
 });
 
@@ -244,9 +278,29 @@ Route::middleware('auth.api')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/me', [AuthController::class, 'me']);
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::post('/refresh', [AuthController::class, 'refresh']);
+    Route::get(
+        '/me',
+        [
+            AuthController::class,
+            'me',
+        ]
+    );
+
+    Route::post(
+        '/logout',
+        [
+            AuthController::class,
+            'logout',
+        ]
+    );
+
+    Route::post(
+        '/refresh',
+        [
+            AuthController::class,
+            'refresh',
+        ]
+    );
 
     Route::post(
         '/chatbot/auth-message',
@@ -677,6 +731,14 @@ Route::middleware('auth.api')->group(function () {
         ]
     );
 
+    Route::get(
+        '/availabilities/me',
+        [
+            AvailabilityController::class,
+            'myAvailabilities',
+        ]
+    );
+
     Route::post(
         '/availabilities',
         [
@@ -898,11 +960,6 @@ Route::middleware('auth.api')->group(function () {
     );
 
     Route::get(
-        '/availabilities/me',
-        [AvailabilityController::class, 'myAvailabilities']
-    );
-
-    Route::get(
         '/applications/{id}',
         [
             ApplicationController::class,
@@ -926,6 +983,7 @@ Route::middleware('auth.api')->group(function () {
         ]
     )->whereNumber('id');
 
+
     /*
     |--------------------------------------------------------------------------
     | Messages
@@ -934,32 +992,50 @@ Route::middleware('auth.api')->group(function () {
 
     Route::get(
         '/messages/conversations',
-        [MessageController::class, 'conversations']
+        [
+            MessageController::class,
+            'conversations',
+        ]
     );
 
     Route::get(
         '/messages/conversation/{userId}',
-        [MessageController::class, 'conversation']
+        [
+            MessageController::class,
+            'conversation',
+        ]
     )->whereNumber('userId');
 
     Route::post(
         '/messages',
-        [MessageController::class, 'store']
+        [
+            MessageController::class,
+            'store',
+        ]
     );
 
     Route::patch(
         '/messages/read-all/{userId}',
-        [MessageController::class, 'markConversationAsRead']
+        [
+            MessageController::class,
+            'markConversationAsRead',
+        ]
     )->whereNumber('userId');
 
     Route::patch(
         '/messages/{id}/read',
-        [MessageController::class, 'markAsRead']
+        [
+            MessageController::class,
+            'markAsRead',
+        ]
     )->whereNumber('id');
 
     Route::delete(
         '/messages/{id}',
-        [MessageController::class, 'destroy']
+        [
+            MessageController::class,
+            'destroy',
+        ]
     )->whereNumber('id');
 
 
@@ -971,27 +1047,42 @@ Route::middleware('auth.api')->group(function () {
 
     Route::get(
         '/reviews',
-        [ReviewController::class, 'index']
+        [
+            ReviewController::class,
+            'index',
+        ]
     );
 
     Route::post(
         '/reviews',
-        [ReviewController::class, 'store']
+        [
+            ReviewController::class,
+            'store',
+        ]
     );
 
     Route::get(
         '/reviews/{id}',
-        [ReviewController::class, 'show']
+        [
+            ReviewController::class,
+            'show',
+        ]
     )->whereNumber('id');
 
     Route::patch(
         '/reviews/{id}',
-        [ReviewController::class, 'update']
+        [
+            ReviewController::class,
+            'update',
+        ]
     )->whereNumber('id');
 
     Route::delete(
         '/reviews/{id}',
-        [ReviewController::class, 'destroy']
+        [
+            ReviewController::class,
+            'destroy',
+        ]
     )->whereNumber('id');
 
 
@@ -1003,27 +1094,42 @@ Route::middleware('auth.api')->group(function () {
 
     Route::get(
         '/notifications',
-        [NotificationController::class, 'index']
+        [
+            NotificationController::class,
+            'index',
+        ]
     );
 
     Route::get(
         '/notifications/unread-count',
-        [NotificationController::class, 'unreadCount']
+        [
+            NotificationController::class,
+            'unreadCount',
+        ]
     );
 
     Route::patch(
         '/notifications/read-all',
-        [NotificationController::class, 'markAllAsRead']
+        [
+            NotificationController::class,
+            'markAllAsRead',
+        ]
     );
 
     Route::patch(
         '/notifications/{id}/read',
-        [NotificationController::class, 'markAsRead']
+        [
+            NotificationController::class,
+            'markAsRead',
+        ]
     )->whereNumber('id');
 
     Route::delete(
         '/notifications/{id}',
-        [NotificationController::class, 'destroy']
+        [
+            NotificationController::class,
+            'destroy',
+        ]
     )->whereNumber('id');
 
 
@@ -1035,32 +1141,50 @@ Route::middleware('auth.api')->group(function () {
 
     Route::get(
         '/reports/summary',
-        [ReportController::class, 'summary']
+        [
+            ReportController::class,
+            'summary',
+        ]
     );
 
     Route::get(
         '/reports',
-        [ReportController::class, 'index']
+        [
+            ReportController::class,
+            'index',
+        ]
     );
 
     Route::post(
         '/reports',
-        [ReportController::class, 'store']
+        [
+            ReportController::class,
+            'store',
+        ]
     );
 
     Route::get(
         '/reports/{id}',
-        [ReportController::class, 'show']
+        [
+            ReportController::class,
+            'show',
+        ]
     )->whereNumber('id');
 
     Route::patch(
         '/reports/{id}',
-        [ReportController::class, 'update']
+        [
+            ReportController::class,
+            'update',
+        ]
     )->whereNumber('id');
 
     Route::delete(
         '/reports/{id}',
-        [ReportController::class, 'destroy']
+        [
+            ReportController::class,
+            'destroy',
+        ]
     )->whereNumber('id');
 });
 

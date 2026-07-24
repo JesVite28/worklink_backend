@@ -4098,6 +4098,36 @@
                 }
             }
         },
+        "/api/public/services/freelancer/{freelancerId}": {
+            "get": {
+                "tags": [
+                    "Services"
+                ],
+                "summary": "Obtener servicios públicos de un freelancer",
+                "description": "Retorna los servicios activos pertenecientes a un perfil freelancer activo.",
+                "operationId": "publicServicesByFreelancer",
+                "parameters": [
+                    {
+                        "name": "freelancerId",
+                        "in": "path",
+                        "description": "ID del perfil freelancer",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Servicios públicos del freelancer obtenidos exitosamente"
+                    },
+                    "404": {
+                        "description": "Perfil freelancer no encontrado"
+                    }
+                }
+            }
+        },
         "/api/public/services/{id}": {
             "get": {
                 "tags": [
