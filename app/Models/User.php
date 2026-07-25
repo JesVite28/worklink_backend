@@ -37,6 +37,8 @@ class User extends Authenticatable implements JWTSubject
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
+        'two_factor_enabled' => 'boolean',
+        'two_factor_enabled_at' => 'datetime',
     ];
 
     public function getJWTIdentifier()
@@ -141,12 +143,20 @@ class User extends Authenticatable implements JWTSubject
     public function hasAllRoles(array $roles): bool
     {
         return collect($roles)->every(
-            fn ($role) => $this->hasRole($role)
+            fn($role) => $this->hasRole($role)
         );
     }
 
     public function mainRole(): ?Role
     {
         return $this->roles()->first();
+    }
+    
+    public function twoFactorChallenges(): HasMany
+    {
+        return $this->hasMany(
+            TwoFactorChallenge::class,
+            'user_id'
+        );
     }
 }

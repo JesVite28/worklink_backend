@@ -7,8 +7,8 @@
     },
     "servers": [
         {
-            "url": "http://127.0.0.1:8000",
-            "description": "Servidor local"
+            "url": "https://worklinkbackend-production-16dd.up.railway.app",
+            "description": "Servidor produccion"
         }
     ],
     "paths": {
@@ -745,6 +745,109 @@
                     },
                     "500": {
                         "description": "Error interno del servidor"
+                    }
+                }
+            }
+        },
+        "/api/forgot-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Solicitar recuperación de contraseña",
+                "description": "Envía un enlace de recuperación al correo indicado cuando existe una cuenta asociada.",
+                "operationId": "forgotPassword",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "usuario@worklink.com"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Solicitud procesada"
+                    },
+                    "422": {
+                        "description": "Correo inválido"
+                    },
+                    "429": {
+                        "description": "Demasiadas solicitudes"
+                    },
+                    "500": {
+                        "description": "No se pudo enviar el correo"
+                    }
+                }
+            }
+        },
+        "/api/reset-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Restablecer contraseña",
+                "description": "Actualiza la contraseña utilizando un token de recuperación válido.",
+                "operationId": "resetPassword",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "token",
+                                    "email",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "token": {
+                                        "type": "string",
+                                        "example": "token-recibido-por-correo"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "usuario@worklink.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "minLength": 8,
+                                        "example": "NuevaPassword123"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "NuevaPassword123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Contraseña restablecida"
+                    },
+                    "422": {
+                        "description": "Token o datos inválidos"
+                    },
+                    "500": {
+                        "description": "No se pudo restablecer la contraseña"
                     }
                 }
             }
@@ -4124,6 +4227,300 @@
                 ]
             }
         },
+        "/api/security/password/code": {
+            "post": {
+                "tags": [
+                    "Security"
+                ],
+                "summary": "Solicitar código para cambiar la contraseña",
+                "description": "Valida la contraseña actual del usuario autenticado y envía un código de seis dígitos a su correo electrónico. El código expira después de 10 minutos.",
+                "operationId": "sendPasswordChangeCode",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "current_password"
+                                ],
+                                "properties": {
+                                    "current_password": {
+                                        "description": "Contraseña actual del usuario",
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Código enviado correctamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Enviamos un código de verificación a tu correo electrónico."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "challenge_token": {
+                                                    "type": "string",
+                                                    "example": "Y4P9x2Vt8cQ7kLmN..."
+                                                },
+                                                "expires_in": {
+                                                    "description": "Tiempo de expiración en segundos",
+                                                    "type": "integer",
+                                                    "example": 600
+                                                },
+                                                "expires_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2026-07-25T23:30:00-06:00"
+                                                },
+                                                "email_hint": {
+                                                    "type": "string",
+                                                    "example": "ad***@gmail.com"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Usuario no autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No autorizado."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Contraseña actual incorrecta o datos inválidos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "La contraseña actual es incorrecta."
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "current_password": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "La contraseña actual no coincide con tu cuenta."
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/security/password/change": {
+            "post": {
+                "tags": [
+                    "Security"
+                ],
+                "summary": "Cambiar contraseña utilizando código de correo",
+                "description": "Verifica la contraseña actual, el desafío temporal y el código de seis dígitos enviado al correo. Después actualiza la contraseña e invalida la sesión actual.",
+                "operationId": "changePasswordWithEmailVerification",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "challenge_token",
+                                    "code",
+                                    "current_password",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "challenge_token": {
+                                        "description": "Token temporal recibido al solicitar el código",
+                                        "type": "string",
+                                        "example": "Y4P9x2Vt8cQ7kLmN..."
+                                    },
+                                    "code": {
+                                        "description": "Código de seis dígitos enviado al correo",
+                                        "type": "string",
+                                        "maxLength": 6,
+                                        "minLength": 6,
+                                        "example": "482917"
+                                    },
+                                    "current_password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "minLength": 8,
+                                        "example": "NuevaPassword123"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "NuevaPassword123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Contraseña actualizada correctamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Tu contraseña fue actualizada correctamente. Inicia sesión nuevamente."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "session_terminated": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Usuario no autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No autorizado."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "El desafío no pertenece al usuario autenticado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "El proceso de verificación no pertenece a tu cuenta."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Código incorrecto, expirado, contraseña actual incorrecta o datos inválidos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The given data was invalid."
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "code": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "Código incorrecto. Te quedan 4 intentos."
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/public/services": {
             "get": {
                 "tags": [
@@ -4535,7 +4932,7 @@
                     "Users"
                 ],
                 "summary": "Actualizar mi cuenta",
-                "description": "Permite al usuario autenticado actualizar sus propios datos personales. La fotografía se modifica desde /api/users/me/profile-photo.",
+                "description": "Permite al usuario autenticado actualizar únicamente sus datos personales. La contraseña se modifica mediante el flujo seguro de verificación por correo.",
                 "operationId": "updateMyUserAccount",
                 "requestBody": {
                     "required": true,
@@ -5499,6 +5896,10 @@
         {
             "name": "Reviews",
             "description": "Calificaciones entre participantes de contratos completados"
+        },
+        {
+            "name": "Security",
+            "description": "Seguridad de la cuenta, verificación por correo y cambio de contraseña"
         },
         {
             "name": "Services",
