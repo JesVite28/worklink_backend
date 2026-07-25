@@ -81,3 +81,32 @@ Para ejecutar las pruebas:
 - Cualquier archivo nuevo debe seguir el estándar PSR‑12 y, al hacer commits, ejecutar `php artisan test` para no romper la suite.
 - Para regenerar la documentación Swagger: `php artisan l5-swagger:generate`.
 
+---
+
+## Distribución Android (sin Play Store)
+
+Este backend ya incluye rutas para descargar la app Android (APK) y consultar metadata de versión.
+
+1. Sube el APK en `storage/app/public/apps/worklink-android.apk`.
+2. Si no existe, crea el enlace público una vez:
+
+```bash
+php artisan storage:link
+```
+
+3. Configura (opcional) las variables en `.env`:
+
+- `ANDROID_APK_PATH=apps/worklink-android.apk`
+- `ANDROID_APK_DOWNLOAD_NAME=worklink-android.apk`
+- `ANDROID_APP_VERSION_NAME=1.0.0`
+- `ANDROID_APP_VERSION_CODE=1`
+- `ANDROID_APP_MIN_SUPPORTED_VERSION_CODE=1`
+- `ANDROID_APP_FORCE_UPDATE=false`
+- `ANDROID_APP_CHANGELOG=`
+- `ANDROID_APP_SHA256=`
+
+### Endpoints listos
+
+- `GET /downloads/android` descarga directa del APK.
+- `GET /api/public/mobile/android/latest` metadata para la web/app móvil (versión, URL de descarga, etc.).
+
