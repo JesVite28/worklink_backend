@@ -21,7 +21,7 @@ use Illuminate\Validation\Rule;
  * )
  *
  * @OA\Server(
- *     url="L5-SWAGGER_CONST_HOST",
+ *     url=L5-SWAGGER_CONST_HOST,
  *     description="Servidor produccion"
  * )
  *
