@@ -21,8 +21,8 @@ use Illuminate\Validation\Rule;
  * )
  *
  * @OA\Server(
- *     url="http://127.0.0.1:8000",
- *     description="Servidor local"
+ *     url="L5-SWAGGER_CONST_HOST",
+ *     description="Servidor produccion"
  * )
  *
  * @OA\SecurityScheme(
