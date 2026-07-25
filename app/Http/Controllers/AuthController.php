@@ -21,7 +21,7 @@ use Illuminate\Validation\Rule;
  * )
  *
  * @OA\Server(
- *     url=L5-SWAGGER_CONST_HOST,
+ *     url="https://worklinkbackend-production-16dd.up.railway.app",
  *     description="Servidor produccion"
  * )
  *
