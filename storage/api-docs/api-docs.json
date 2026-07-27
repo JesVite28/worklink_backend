@@ -3442,6 +3442,39 @@
                 ]
             }
         },
+        "/api/public/mobile/android/latest": {
+            "get": {
+                "tags": [
+                    "Mobile App"
+                ],
+                "summary": "Obtener metadata de la app Android",
+                "description": "Retorna versión, disponibilidad y URL de descarga del APK Android.",
+                "operationId": "mobileAndroidLatest",
+                "responses": {
+                    "200": {
+                        "description": "Metadata obtenida exitosamente"
+                    }
+                }
+            }
+        },
+        "/downloads/android": {
+            "get": {
+                "tags": [
+                    "Mobile App"
+                ],
+                "summary": "Descargar APK Android",
+                "description": "Descarga el archivo APK Android publicado por el backend.",
+                "operationId": "downloadAndroidApk",
+                "responses": {
+                    "200": {
+                        "description": "Descarga iniciada"
+                    },
+                    "404": {
+                        "description": "APK no encontrada"
+                    }
+                }
+            }
+        },
         "/api/notifications": {
             "get": {
                 "tags": [
@@ -5884,6 +5917,10 @@
         {
             "name": "Messages",
             "description": "Endpoints para mensajería entre usuarios"
+        },
+        {
+            "name": "Mobile App",
+            "description": "Distribución y metadata de la app móvil"
         },
         {
             "name": "Notifications",

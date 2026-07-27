@@ -1,2 +1,5 @@
 *
-!.gitignore
+!apps/
+!worklink-android.apk
+
+

@@ -20,6 +20,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\LegalDocumentController;
+use App\Http\Controllers\MobileAppController;
 use App\Http\Controllers\SecurityController;
 use App\Http\Controllers\Api\ChatBotController;
 
@@ -101,6 +102,20 @@ Route::post(
 */
 
 Route::prefix('public')->group(function () {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Public Mobile App
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/mobile/android/latest',
+        [
+            MobileAppController::class,
+            'androidLatest',
+        ]
+    );
 
     /*
     |--------------------------------------------------------------------------
