@@ -21,6 +21,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\LegalDocumentController;
 use App\Http\Controllers\MobileAppController;
+use App\Http\Controllers\SecurityController;
 use App\Http\Controllers\Api\ChatBotController;
 
 
@@ -45,6 +46,45 @@ Route::post(
         'register',
     ]
 );
+
+Route::post(
+    '/forgot-password',
+    [
+        AuthController::class,
+        'forgotPassword',
+    ]
+)->middleware('throttle:5,1');
+
+Route::post(
+    '/reset-password',
+    [
+        AuthController::class,
+        'resetPassword',
+    ]
+)->middleware('throttle:10,1');
+
+/*
+|--------------------------------------------------------------------------
+| Public Two-Factor Authentication
+|--------------------------------------------------------------------------
+*/
+
+Route::post(
+    '/2fa/verify',
+    [
+        AuthController::class,
+        'verifyTwoFactorLogin',
+    ]
+)->middleware('throttle:10,1');
+
+Route::post(
+    '/2fa/resend',
+    [
+        AuthController::class,
+        'resendTwoFactorLogin',
+    ]
+)->middleware('throttle:3,1');
+
 
 Route::post(
     '/chatbot/message',
@@ -316,6 +356,68 @@ Route::middleware('auth.api')->group(function () {
             'refresh',
         ]
     );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Two-Factor Authentication Settings
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/2fa/status',
+        [
+            AuthController::class,
+            'twoFactorStatus',
+        ]
+    );
+
+    Route::post(
+        '/2fa/enable',
+        [
+            AuthController::class,
+            'requestTwoFactorEnable',
+        ]
+    )->middleware('throttle:3,1');
+
+    Route::post(
+        '/2fa/enable/verify',
+        [
+            AuthController::class,
+            'verifyTwoFactorEnable',
+        ]
+    )->middleware('throttle:10,1');
+
+    Route::patch(
+        '/2fa/disable',
+        [
+            AuthController::class,
+            'disableTwoFactor',
+        ]
+    )->middleware('throttle:5,1');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Password Security
+    |--------------------------------------------------------------------------
+    */
+
+    Route::post(
+        '/security/password/code',
+        [
+            SecurityController::class,
+            'sendPasswordChangeCode',
+        ]
+    )->middleware('throttle:3,1');
+
+    Route::post(
+        '/security/password/change',
+        [
+            SecurityController::class,
+            'changePassword',
+        ]
+    )->middleware('throttle:10,1');
+
 
     Route::post(
         '/chatbot/auth-message',

@@ -68,7 +68,7 @@ class UserController extends Controller
      *     path="/api/users/me",
      *     operationId="updateMyUserAccount",
      *     summary="Actualizar mi cuenta",
-     *     description="Permite al usuario autenticado actualizar sus propios datos personales. La fotografía se modifica desde /api/users/me/profile-photo.",
+     *     description="Permite al usuario autenticado actualizar únicamente sus datos personales. La contraseña se modifica mediante el flujo seguro de verificación por correo.",
      *     tags={"Users"},
      *     security={{"bearerAuth":{}}},
      *
@@ -190,57 +190,22 @@ class UserController extends Controller
                 'max:20',
             ],
 
+            /*
+             * La contraseña no puede cambiarse desde este endpoint.
+             * Debe utilizarse el flujo con código enviado al correo.
+             */
             'current_password' => [
-                'required_with:password',
-                'nullable',
-                'string',
+                'prohibited',
             ],
 
             'password' => [
-                'sometimes',
-                'nullable',
-                'string',
-                'min:8',
-                'confirmed',
+                'prohibited',
+            ],
+
+            'password_confirmation' => [
+                'prohibited',
             ],
         ]);
-
-        if (! empty($validated['password'])) {
-            if (
-                empty($validated['current_password'])
-                || ! Hash::check(
-                    $validated['current_password'],
-                    $user->password
-                )
-            ) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'La contraseña actual es incorrecta.',
-                    'errors' => [
-                        'current_password' => [
-                            'La contraseña actual no es correcta.',
-                        ],
-                    ],
-                ], 422);
-            }
-
-            if (
-                Hash::check(
-                    $validated['password'],
-                    $user->password
-                )
-            ) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'La nueva contraseña debe ser diferente a la actual.',
-                    'errors' => [
-                        'password' => [
-                            'La nueva contraseña debe ser diferente a la actual.',
-                        ],
-                    ],
-                ], 422);
-            }
-        }
 
         DB::transaction(function () use ($user, $validated) {
             $data = [];
@@ -257,12 +222,6 @@ class UserController extends Controller
                 if (array_key_exists($field, $validated)) {
                     $data[$field] = $validated[$field];
                 }
-            }
-
-            if (! empty($validated['password'])) {
-                $data['password'] = Hash::make(
-                    $validated['password']
-                );
             }
 
             if (! empty($data)) {
